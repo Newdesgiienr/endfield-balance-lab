@@ -123,12 +123,22 @@
   }
 
   function referenceEntryHtml(item, index, kind) {
-    const type = kind === 'skill' ? (item.type || `전투 스킬 ${index + 1}`) : (item.index || `재능 ${index + 1}`);
-    return `<article class="party-reference-entry">
+    const type = kind === 'skill'
+      ? (item.type || `전투 스킬 ${index + 1}`)
+      : kind === 'potential'
+        ? (item.index || `P${index + 1}`)
+        : (item.index || `재능 ${index + 1}`);
+    const paragraphs = kind === 'potential'
+      ? [item.text].filter(Boolean)
+      : (item.paragraphs || []);
+    const chips = kind === 'potential'
+      ? (item.target ? [`영향 대상 · ${item.target}`] : [])
+      : (item.chips || []);
+    return `<article class="party-reference-entry party-reference-entry--${esc(kind)}">
       <header><span>${esc(type)}</span><strong>${esc(item.name)}</strong></header>
       ${referenceBadgeHtml(item)}
-      <div class="party-reference-entry-copy">${(item.paragraphs || []).map((paragraph) => `<p>${rich(paragraph)}</p>`).join('')}</div>
-      ${item.chips?.length ? `<div class="party-reference-chips">${item.chips.map((chip) => `<span>${esc(chip)}</span>`).join('')}</div>` : ''}
+      <div class="party-reference-entry-copy">${paragraphs.map((paragraph) => `<p>${rich(paragraph)}</p>`).join('')}</div>
+      ${chips.length ? `<div class="party-reference-chips">${chips.map((chip) => `<span>${esc(chip)}</span>`).join('')}</div>` : ''}
     </article>`;
   }
 
@@ -145,6 +155,10 @@
       <section class="party-reference-section" aria-labelledby="results-reference-talents-title">
         <header><div><small>TALENTS</small><h4 id="results-reference-talents-title">재능</h4></div><span>${character.talents?.length || 0}종</span></header>
         <div class="party-reference-list">${(character.talents || []).map((talent, index) => referenceEntryHtml(talent, index, 'talent')).join('')}</div>
+      </section>
+      <section class="party-reference-section" aria-labelledby="results-reference-potentials-title">
+        <header><div><small>POTENTIALS</small><h4 id="results-reference-potentials-title">잠재력</h4></div><span>${character.potentials?.length || 0}단계</span></header>
+        <div class="party-reference-list">${(character.potentials || []).map((potential, index) => referenceEntryHtml(potential, index, 'potential')).join('')}</div>
       </section>
     </div>`;
   }
@@ -195,7 +209,7 @@
       if (!query) {
         matches = [];
         results.hidden = true;
-        content.innerHTML = `<div class="party-reference-empty"><strong>캐릭터 이름을 검색해 주세요.</strong><p>선택한 캐릭터의 전투 스킬 4종과 재능 2종을 이 패널에서 바로 확인할 수 있습니다.</p></div>`;
+        content.innerHTML = `<div class="party-reference-empty"><strong>캐릭터 이름을 검색해 주세요.</strong><p>선택한 캐릭터의 전투 스킬 4종, 재능 2종과 잠재력 P1~P5를 이 패널에서 바로 확인할 수 있습니다.</p></div>`;
         delete content.dataset.characterId;
         return;
       }
@@ -217,7 +231,7 @@
 
       results.innerHTML = matches.map(referenceSearchResultHtml).join('');
       results.hidden = false;
-      content.innerHTML = `<div class="party-reference-empty"><strong>검색 결과에서 캐릭터를 선택해 주세요.</strong><p>이름을 모두 입력하거나 결과를 클릭하면 전투 스킬과 재능을 불러옵니다.</p></div>`;
+      content.innerHTML = `<div class="party-reference-empty"><strong>검색 결과에서 캐릭터를 선택해 주세요.</strong><p>이름을 모두 입력하거나 결과를 클릭하면 전투 스킬, 재능과 잠재력을 불러옵니다.</p></div>`;
       delete content.dataset.characterId;
     }
 
@@ -447,14 +461,14 @@
     </button>
     <aside id="party-reference-panel" class="party-reference-panel" aria-hidden="true" aria-labelledby="party-reference-title" inert>
       <div class="party-reference-panel-inner">
-        <header class="party-reference-panel-heading"><small>QUICK CHARACTER LOOKUP</small><h2 id="party-reference-title">캐릭터 빠른 조회</h2><p>분석 결과를 유지한 채 캐릭터의 전투 스킬과 재능을 확인하세요.</p></header>
+        <header class="party-reference-panel-heading"><small>QUICK CHARACTER LOOKUP</small><h2 id="party-reference-title">캐릭터 빠른 조회</h2><p>분석 결과를 유지한 채 캐릭터의 전투 스킬, 재능과 잠재력을 확인하세요.</p></header>
         <label class="search-field party-reference-search-field">
           <span>캐릭터 검색</span>
           <input id="party-reference-search" type="search" autocomplete="off" placeholder="예: 이본, 탕탕, 레바테인" aria-controls="party-reference-results">
         </label>
         <div id="party-reference-results" class="party-reference-results" role="listbox" hidden></div>
         <div id="party-reference-content" class="party-reference-content" aria-live="polite">
-          <div class="party-reference-empty"><strong>캐릭터 이름을 검색해 주세요.</strong><p>선택한 캐릭터의 전투 스킬 4종과 재능 2종을 이 패널에서 바로 확인할 수 있습니다.</p></div>
+          <div class="party-reference-empty"><strong>캐릭터 이름을 검색해 주세요.</strong><p>선택한 캐릭터의 전투 스킬 4종, 재능 2종과 잠재력 P1~P5를 이 패널에서 바로 확인할 수 있습니다.</p></div>
         </div>
       </div>
     </aside>`;
