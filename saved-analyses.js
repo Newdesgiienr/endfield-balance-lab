@@ -1,0 +1,1 @@
+window.SAVED_PARTY_ANALYSES = window.SAVED_PARTY_ANALYSES || [];
