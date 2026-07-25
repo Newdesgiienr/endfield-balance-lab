@@ -691,3 +691,16 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
 .board-instruction { padding: 12px 18px 14px; border-top: 1px solid #e1e7ec; background: #fff; }
 .board-instruction.active { background: #fff3d6; }
 .board-unplace-note { display: none !important; }
+
+
+/* v75: sparse grid placement — markers keep the column where they are dropped */
+.tier-dropzone {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,.022) 1px, transparent 1px);
+  background-size: calc(100% / 8) 100%;
+  background-position: 0 0;
+}
+.tier-dropzone.drag-over {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,.055) 1px, transparent 1px);
+}

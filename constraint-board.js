@@ -102,6 +102,8 @@
       tier: [1, 2, 3].includes(Number(item.tier)) ? Number(item.tier) : null,
       x: clamp(Number(item.x) || .5, .04, .96),
       y: clamp(Number(item.y) || .5, .08, .92),
+      gridCol: Number.isFinite(Number(item.gridCol)) ? clamp(Math.round(Number(item.gridCol)), 0, BOARD_GRID_COLUMNS - 1) : null,
+      gridRow: Number.isFinite(Number(item.gridRow)) ? Math.max(0, Math.round(Number(item.gridRow))) : null,
       layoutOrder: Number.isFinite(Number(item.layoutOrder)) ? Number(item.layoutOrder) : index,
       sourceConstraintId: item.sourceConstraintId ? String(item.sourceConstraintId) : null,
       createdAt: item.createdAt || new Date().toISOString(),
@@ -230,28 +232,14 @@
       const row = zone.closest('.score-row');
       const scoreRowVisible = boardScoreFilter === 'all' || tier === Number(boardScoreFilter);
       row.classList.toggle('is-score-filtered-out', !scoreRowVisible);
-      if (!scoreRowVisible) return;
       const allMarkers = sortedTierMarkers(tier);
-      const visibleMarkers = allMarkers.filter(markerMatchesBoardFilter);
-      visibleCount += visibleMarkers.length;
-      const rows = Math.max(1, Math.ceil(visibleMarkers.length / BOARD_GRID_COLUMNS));
-      const rowHeight = visibleMarkers.length === 0 ? 150 : (rows === 1 ? 190 : Math.max(190, rows * 100 + 20));
-      row.style.height = `${rowHeight}px`;
-      const visibleIndex = new Map(visibleMarkers.map((marker, index) => [marker.id, index]));
       allMarkers.forEach((marker) => {
         const element = zone.querySelector(`[data-marker-id="${CSS.escape(marker.id)}"]`);
         if (!element) return;
-        const index = visibleIndex.get(marker.id);
-        const hidden = index == null;
+        const hidden = !scoreRowVisible || !markerMatchesBoardFilter(marker);
         element.classList.toggle('is-board-filtered-out', hidden);
         element.setAttribute('aria-hidden', String(hidden));
-        if (hidden) return;
-        const col = index % BOARD_GRID_COLUMNS;
-        const gridRow = Math.floor(index / BOARD_GRID_COLUMNS);
-        const x = (col + .5) / BOARD_GRID_COLUMNS;
-        const y = rows === 1 ? .5 : (60 + gridRow * 100) / rowHeight;
-        element.style.left = `${x * 100}%`;
-        element.style.top = `${y * 100}%`;
+        if (!hidden) visibleCount += 1;
       });
     });
     if (boardFilterCount) boardFilterCount.textContent = `표시 ${visibleCount}개`;
@@ -386,7 +374,11 @@
     return state.markers.filter((marker) => idSet.has(marker.id)).sort((a, b) => {
       const tierA = a.tier == null ? 9 : a.tier;
       const tierB = b.tier == null ? 9 : b.tier;
-      return tierA - tierB || a.layoutOrder - b.layoutOrder || Date.parse(a.createdAt) - Date.parse(b.createdAt);
+      const rowA = Number.isFinite(Number(a.gridRow)) ? Number(a.gridRow) : Math.floor((a.layoutOrder || 0) / BOARD_GRID_COLUMNS);
+      const rowB = Number.isFinite(Number(b.gridRow)) ? Number(b.gridRow) : Math.floor((b.layoutOrder || 0) / BOARD_GRID_COLUMNS);
+      const colA = Number.isFinite(Number(a.gridCol)) ? Number(a.gridCol) : (a.layoutOrder || 0) % BOARD_GRID_COLUMNS;
+      const colB = Number.isFinite(Number(b.gridCol)) ? Number(b.gridCol) : (b.layoutOrder || 0) % BOARD_GRID_COLUMNS;
+      return tierA - tierB || rowA - rowB || colA - colB || Date.parse(a.createdAt) - Date.parse(b.createdAt);
     });
   }
 
@@ -423,22 +415,72 @@
   function sortedTierMarkers(tier, excludingId = null) {
     return state.markers
       .filter((marker) => marker.tier === Number(tier) && marker.id !== excludingId)
-      .sort((a, b) => (a.layoutOrder - b.layoutOrder) || Date.parse(a.createdAt) - Date.parse(b.createdAt));
+      .sort((a, b) => {
+        const rowA = Number.isFinite(Number(a.gridRow)) ? Number(a.gridRow) : Math.floor((a.layoutOrder || 0) / BOARD_GRID_COLUMNS);
+        const rowB = Number.isFinite(Number(b.gridRow)) ? Number(b.gridRow) : Math.floor((b.layoutOrder || 0) / BOARD_GRID_COLUMNS);
+        const colA = Number.isFinite(Number(a.gridCol)) ? Number(a.gridCol) : (a.layoutOrder || 0) % BOARD_GRID_COLUMNS;
+        const colB = Number.isFinite(Number(b.gridCol)) ? Number(b.gridCol) : (b.layoutOrder || 0) % BOARD_GRID_COLUMNS;
+        return rowA - rowB || colA - colB || Date.parse(a.createdAt) - Date.parse(b.createdAt);
+      });
+  }
+
+  function slotKey(row, col) {
+    return `${row}:${col}`;
+  }
+
+  function inferredSlot(marker) {
+    const fallbackOrder = Math.max(0, Number(marker.layoutOrder) || 0);
+    const gridCol = Number.isFinite(Number(marker.gridCol))
+      ? clamp(Math.round(Number(marker.gridCol)), 0, BOARD_GRID_COLUMNS - 1)
+      : clamp(Math.floor(clamp(Number(marker.x) || .5, 0, .9999) * BOARD_GRID_COLUMNS), 0, BOARD_GRID_COLUMNS - 1);
+    const gridRow = Number.isFinite(Number(marker.gridRow))
+      ? Math.max(0, Math.round(Number(marker.gridRow)))
+      : Math.floor(fallbackOrder / BOARD_GRID_COLUMNS);
+    return { row: gridRow, col: gridCol };
+  }
+
+  function findNearestFreeSlot(occupied, targetCol, targetRow = 0) {
+    const col = clamp(Math.round(Number(targetCol) || 0), 0, BOARD_GRID_COLUMNS - 1);
+    const row = Math.max(0, Math.round(Number(targetRow) || 0));
+    if (!occupied.has(slotKey(row, col))) return { row, col };
+    const maxRow = Math.max(row + 3, ...[...occupied].map((key) => Number(key.split(':')[0]) || 0)) + 2;
+    for (let distance = 1; distance <= BOARD_GRID_COLUMNS + maxRow; distance += 1) {
+      const candidates = [];
+      for (let rowOffset = -distance; rowOffset <= distance; rowOffset += 1) {
+        const candidateRow = row + rowOffset;
+        if (candidateRow < 0 || candidateRow > maxRow) continue;
+        const colDistance = distance - Math.abs(rowOffset);
+        [col - colDistance, col + colDistance].forEach((candidateCol) => {
+          if (candidateCol < 0 || candidateCol >= BOARD_GRID_COLUMNS) return;
+          candidates.push({ row: candidateRow, col: candidateCol });
+        });
+      }
+      candidates.sort((a, b) => Math.abs(a.row - row) - Math.abs(b.row - row) || Math.abs(a.col - col) - Math.abs(b.col - col) || a.row - b.row || a.col - b.col);
+      const free = candidates.find((candidate) => !occupied.has(slotKey(candidate.row, candidate.col)));
+      if (free) return free;
+    }
+    return { row: maxRow + 1, col: 0 };
   }
 
   function reflowTier(tier) {
     const markers = sortedTierMarkers(tier);
     const zone = tierZones.find((item) => Number(item.dataset.tier) === Number(tier));
-    const row = zone?.closest('.score-row');
-    const rows = Math.max(1, Math.ceil(markers.length / BOARD_GRID_COLUMNS));
-    const rowHeight = rows === 1 ? 190 : Math.max(190, rows * 100 + 20);
-    if (row) row.style.height = `${rowHeight}px`;
-    markers.forEach((marker, index) => {
-      const col = index % BOARD_GRID_COLUMNS;
-      const gridRow = Math.floor(index / BOARD_GRID_COLUMNS);
-      marker.layoutOrder = index;
-      marker.x = (col + .5) / BOARD_GRID_COLUMNS;
-      marker.y = rows === 1 ? .5 : (60 + gridRow * 100) / rowHeight;
+    const rowElement = zone?.closest('.score-row');
+    const occupied = new Set();
+    markers.forEach((marker) => {
+      const desired = inferredSlot(marker);
+      const slot = findNearestFreeSlot(occupied, desired.col, desired.row);
+      occupied.add(slotKey(slot.row, slot.col));
+      marker.gridCol = slot.col;
+      marker.gridRow = slot.row;
+      marker.layoutOrder = slot.row * BOARD_GRID_COLUMNS + slot.col;
+    });
+    const maxRow = markers.reduce((max, marker) => Math.max(max, Number(marker.gridRow) || 0), 0);
+    const rowHeight = maxRow === 0 ? 190 : Math.max(190, (maxRow + 1) * 100 + 20);
+    if (rowElement) rowElement.style.height = `${rowHeight}px`;
+    markers.forEach((marker) => {
+      marker.x = (marker.gridCol + .5) / BOARD_GRID_COLUMNS;
+      marker.y = maxRow === 0 ? .5 : (60 + marker.gridRow * 100) / rowHeight;
     });
   }
 
@@ -446,37 +488,59 @@
     [1, 2, 3].forEach(reflowTier);
   }
 
-  function dropIndexForPoint(zone, x, y, markerIds) {
+  function dropSlotForPoint(zone, x, y, markerIds) {
     const rect = zone.getBoundingClientRect();
-    const excluded = new Set(Array.isArray(markerIds) ? markerIds : [markerIds]);
+    const excluded = new Set((Array.isArray(markerIds) ? markerIds : [markerIds]).map(String));
     const current = sortedTierMarkers(Number(zone.dataset.tier)).filter((marker) => !excluded.has(marker.id));
-    const rows = Math.max(1, Math.ceil((current.length + 1) / BOARD_GRID_COLUMNS));
+    const maxRow = current.reduce((max, marker) => Math.max(max, Number(marker.gridRow) || 0), 0);
+    const rowCount = Math.max(1, maxRow + 1);
     const col = clamp(Math.floor(((x - rect.left) / Math.max(1, rect.width)) * BOARD_GRID_COLUMNS), 0, BOARD_GRID_COLUMNS - 1);
-    const row = clamp(Math.floor(((y - rect.top) / Math.max(1, rect.height)) * rows), 0, rows - 1);
-    return clamp(row * BOARD_GRID_COLUMNS + col, 0, current.length);
+    const row = rowCount === 1
+      ? 0
+      : clamp(Math.floor(((y - rect.top) / Math.max(1, rect.height)) * rowCount), 0, rowCount - 1);
+    return { row, col };
   }
 
-  function placeMarkersInTier(markerIds, tier, insertIndex = null) {
+  function placeMarkersAtSlot(markerIds, tier, targetCol, targetRow = 0) {
     const ids = [...new Set(markerIds.map(String))];
     const moving = orderedMarkers(ids);
     if (!moving.length) return false;
     const oldTiers = new Set(moving.map((marker) => marker.tier).filter((value) => value != null));
     const idSet = new Set(ids);
     const destination = sortedTierMarkers(tier).filter((marker) => !idSet.has(marker.id));
-    const index = insertIndex == null ? destination.length : clamp(insertIndex, 0, destination.length);
-    destination.splice(index, 0, ...moving);
-    moving.forEach((marker) => {
+    const occupied = new Set(destination.map((marker) => {
+      const slot = inferredSlot(marker);
+      return slotKey(slot.row, slot.col);
+    }));
+    moving.forEach((marker, index) => {
+      const linear = Math.max(0, targetRow) * BOARD_GRID_COLUMNS + Math.max(0, targetCol) + index;
+      const desiredRow = Math.floor(linear / BOARD_GRID_COLUMNS);
+      const desiredCol = linear % BOARD_GRID_COLUMNS;
+      const slot = findNearestFreeSlot(occupied, desiredCol, desiredRow);
+      occupied.add(slotKey(slot.row, slot.col));
       marker.tier = Number(tier);
+      marker.gridCol = slot.col;
+      marker.gridRow = slot.row;
+      marker.layoutOrder = slot.row * BOARD_GRID_COLUMNS + slot.col;
       marker.updatedAt = new Date().toISOString();
     });
-    destination.forEach((item, order) => { item.layoutOrder = order; });
     oldTiers.forEach((oldTier) => { if (oldTier !== Number(tier)) reflowTier(oldTier); });
     reflowTier(tier);
     return true;
   }
 
-  function placeMarkerInTier(markerId, tier, insertIndex = null) {
-    return placeMarkersInTier([markerId], tier, insertIndex);
+  function placeMarkersInTier(markerIds, tier) {
+    reflowTier(tier);
+    const movingIds = new Set(markerIds.map(String));
+    const occupied = new Set(sortedTierMarkers(tier)
+      .filter((marker) => !movingIds.has(marker.id))
+      .map((marker) => slotKey(Number(marker.gridRow) || 0, Number(marker.gridCol) || 0)));
+    const first = findNearestFreeSlot(occupied, 0, 0);
+    return placeMarkersAtSlot(markerIds, tier, first.col, first.row);
+  }
+
+  function placeMarkerInTier(markerId, tier) {
+    return placeMarkersInTier([markerId], tier);
   }
 
   function unplaceMarkers(markerIds) {
@@ -486,6 +550,8 @@
       if (!ids.has(marker.id)) return;
       if (marker.tier != null) oldTiers.add(marker.tier);
       marker.tier = null;
+      marker.gridCol = null;
+      marker.gridRow = null;
       marker.layoutOrder = 0;
       scoreSelectedMarkerIds.delete(marker.id);
       marker.updatedAt = new Date().toISOString();
@@ -673,9 +739,9 @@
     const overTray = document.elementsFromPoint(x, y).some((element) => element === tray || element.closest?.('#marker-tray'));
     if (zone) {
       const tier = Number(zone.dataset.tier);
-      const insertIndex = dropIndexForPoint(zone, x, y, movingIds);
-      placeMarkersInTier(movingIds, tier, insertIndex);
-      showToast(movingIds.length > 1 ? `${movingIds.length}개 제약을 ${tier}점 구역에 함께 배치했습니다.` : `${tier}점 구역에 자동 정렬해 배치했습니다.`);
+      const slot = dropSlotForPoint(zone, x, y, movingIds);
+      placeMarkersAtSlot(movingIds, tier, slot.col, slot.row);
+      showToast(movingIds.length > 1 ? `${movingIds.length}개 제약을 ${tier}점 구역의 선택한 위치에 함께 배치했습니다.` : `${tier}점 구역의 선택한 위치에 배치했습니다.`);
     } else if (y > boardRect.bottom - 4 || overTray) {
       unplaceMarkers(movingIds);
       showToast(movingIds.length > 1 ? `${movingIds.length}개 제약을 현황판에서 제거하고 미배치 보관함으로 옮겼습니다.` : '현황판에서 제거하고 미배치 보관함으로 옮겼습니다.');
@@ -910,7 +976,7 @@
       label: document.getElementById('marker-label').value.trim(),
       title: document.getElementById('marker-title').value.trim(),
       description: document.getElementById('marker-description').value.trim(),
-      tier: null, x: .5, y: .5, layoutOrder: 0,
+      tier: null, x: .5, y: .5, gridCol: null, gridRow: null, layoutOrder: 0,
       sourceConstraintId: null,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
     };
@@ -1039,7 +1105,7 @@
     const marker = {
       id: uid('constraint'), category: item.category, label: item.label.slice(0, 18), title: item.label,
       description: `${item.feature}\n${item.description}\n예상 영향: ${item.impact}`,
-      tier: null, x: .5, y: .5, layoutOrder: 0, sourceConstraintId: item.id,
+      tier: null, x: .5, y: .5, gridCol: null, gridRow: null, layoutOrder: 0, sourceConstraintId: item.id,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
     };
     state.markers.push(marker);
