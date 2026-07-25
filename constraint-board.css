@@ -460,3 +460,93 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
 /* v69: continuous rounded category outlines and clearer score label */
 
 /* v70: V68 incremental patch — continuous category outlines and updated interaction guide */
+
+
+/* v71: continuous rounded category borders and redesigned selected score total */
+.tray-category,
+.placement-category,
+.placement-drawer .placement-category {
+  position: relative;
+  border: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: none;
+}
+.tray-category::before,
+.placement-category::before,
+.placement-drawer .placement-category::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--category-color);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 3;
+}
+.tray-category > header,
+.placement-category > header {
+  position: relative;
+  z-index: 1;
+}
+.tray-category-grid,
+.placement-category-list,
+.placement-drawer .placement-category-list {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+}
+.tray-category > header {
+  background: color-mix(in srgb, var(--category-color) 7%, white 93%);
+}
+.placement-category > header {
+  background: color-mix(in srgb, var(--category-color) 5%, white 95%);
+}
+
+.score-selection-total {
+  gap: 14px;
+  min-height: 56px;
+  padding: 10px 18px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ff6c73 0%, #f05663 55%, #e6475a 100%);
+  color: rgba(255,255,255,.94);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 12px 28px rgba(215,61,80,.24);
+}
+.score-selection-total span {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: -.01em;
+}
+.score-selection-total strong {
+  min-width: 62px;
+  color: #fff;
+  font-size: 33px;
+  line-height: 1;
+  letter-spacing: -.04em;
+  text-align: right;
+}
+.score-selection-total.active {
+  border-color: rgba(255,255,255,.26);
+  background: linear-gradient(135deg, #ff6168 0%, #f04b58 50%, #df3d52 100%);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 0 0 3px rgba(240,84,99,.14), 0 16px 32px rgba(215,61,80,.28);
+}
+.score-selection-total.active strong {
+  color: #fff;
+}
+
+@media (max-width: 700px) {
+  .score-selection-total {
+    min-height: 50px;
+    padding: 9px 14px;
+    gap: 10px;
+  }
+  .score-selection-total span {
+    font-size: 11px;
+  }
+  .score-selection-total strong {
+    min-width: 52px;
+    font-size: 28px;
+  }
+}
