@@ -69,6 +69,7 @@
               <a href="party.html">파티 분석</a>
               <a href="results.html" class="active" aria-current="page">분석 결과</a>
               <a href="constraints.html">제약 추천</a>
+              <a href="constraint-board.html">제약 설계</a>
             </nav>
           </div>
         </div>

@@ -576,6 +576,7 @@
               <a href="party.html" class="active" aria-current="page">파티 분석</a>
               <a href="results.html?partyDpr=${encodeURIComponent(window.devicePixelRatio || 1)}">분석 결과</a>
               <a href="constraints.html">제약 추천</a>
+              <a href="constraint-board.html">제약 설계</a>
             </nav>
           </div>
         </div>

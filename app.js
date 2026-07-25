@@ -392,6 +392,7 @@
               <a href="party.html" class="${activePage === 'party' ? 'active' : ''}">파티 분석</a>
               <a href="results.html" class="${activePage === 'results' ? 'active' : ''}">분석 결과</a>
               <a href="constraints.html" class="${activePage === 'constraints' ? 'active' : ''}">제약 추천</a>
+              <a href="constraint-board.html" class="${activePage === 'constraint-board' ? 'active' : ''}">제약 설계</a>
             </nav>
           </div>
         </div>

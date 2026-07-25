@@ -15,7 +15,7 @@
   }
 
   function siteHeader() {
-    return `<header class="app-topbar"><div class="brand"><a class="brand-mark" href="index.html" aria-label="Endfield Balance Lab 캐릭터 페이지">EB</a><div class="brand-copy"><a class="brand-title" href="index.html"><strong>ENDFIELD BALANCE LAB</strong></a><div class="brand-lower"><small>캐릭터 전투 구조 데이터베이스</small><nav class="site-nav" aria-label="페이지 전환"><a href="glossary.html">용어 사전</a><a href="index.html">캐릭터</a><a href="party.html">파티 분석</a><a href="results.html">분석 결과</a><a href="constraints.html" class="active" aria-current="page">제약 추천</a></nav></div></div></div></header>`;
+    return `<header class="app-topbar"><div class="brand"><a class="brand-mark" href="index.html" aria-label="Endfield Balance Lab 캐릭터 페이지">EB</a><div class="brand-copy"><a class="brand-title" href="index.html"><strong>ENDFIELD BALANCE LAB</strong></a><div class="brand-lower"><small>캐릭터 전투 구조 데이터베이스</small><nav class="site-nav" aria-label="페이지 전환"><a href="glossary.html">용어 사전</a><a href="index.html">캐릭터</a><a href="party.html">파티 분석</a><a href="results.html">분석 결과</a><a href="constraints.html" class="active" aria-current="page">제약 추천</a><a href="constraint-board.html">제약 설계</a></nav></div></div></div></header>`;
   }
 
   function portrait(member, className = '') {
