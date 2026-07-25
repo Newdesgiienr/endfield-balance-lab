@@ -704,3 +704,12 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
   background-image:
     linear-gradient(to right, rgba(255,255,255,.055) 1px, transparent 1px);
 }
+
+
+/* v76: one marker per score cell; no vertical stacking inside a tier */
+.score-row { height:190px !important; }
+.tier-dropzone {
+  background-image: linear-gradient(to right, rgba(255,255,255,.055) 1px, transparent 1px);
+  background-size: calc(100% / 8) 100%;
+}
+.board-marker { top:50% !important; }

@@ -103,7 +103,7 @@
       x: clamp(Number(item.x) || .5, .04, .96),
       y: clamp(Number(item.y) || .5, .08, .92),
       gridCol: Number.isFinite(Number(item.gridCol)) ? clamp(Math.round(Number(item.gridCol)), 0, BOARD_GRID_COLUMNS - 1) : null,
-      gridRow: Number.isFinite(Number(item.gridRow)) ? Math.max(0, Math.round(Number(item.gridRow))) : null,
+      gridRow: [1, 2, 3].includes(Number(item.tier)) ? 0 : null,
       layoutOrder: Number.isFinite(Number(item.layoutOrder)) ? Number(item.layoutOrder) : index,
       sourceConstraintId: item.sourceConstraintId ? String(item.sourceConstraintId) : null,
       createdAt: item.createdAt || new Date().toISOString(),
@@ -429,37 +429,22 @@
   }
 
   function inferredSlot(marker) {
-    const fallbackOrder = Math.max(0, Number(marker.layoutOrder) || 0);
     const gridCol = Number.isFinite(Number(marker.gridCol))
       ? clamp(Math.round(Number(marker.gridCol)), 0, BOARD_GRID_COLUMNS - 1)
       : clamp(Math.floor(clamp(Number(marker.x) || .5, 0, .9999) * BOARD_GRID_COLUMNS), 0, BOARD_GRID_COLUMNS - 1);
-    const gridRow = Number.isFinite(Number(marker.gridRow))
-      ? Math.max(0, Math.round(Number(marker.gridRow)))
-      : Math.floor(fallbackOrder / BOARD_GRID_COLUMNS);
-    return { row: gridRow, col: gridCol };
+    return { row: 0, col: gridCol };
   }
 
-  function findNearestFreeSlot(occupied, targetCol, targetRow = 0) {
+  function findNearestFreeSlot(occupied, targetCol) {
     const col = clamp(Math.round(Number(targetCol) || 0), 0, BOARD_GRID_COLUMNS - 1);
-    const row = Math.max(0, Math.round(Number(targetRow) || 0));
-    if (!occupied.has(slotKey(row, col))) return { row, col };
-    const maxRow = Math.max(row + 3, ...[...occupied].map((key) => Number(key.split(':')[0]) || 0)) + 2;
-    for (let distance = 1; distance <= BOARD_GRID_COLUMNS + maxRow; distance += 1) {
-      const candidates = [];
-      for (let rowOffset = -distance; rowOffset <= distance; rowOffset += 1) {
-        const candidateRow = row + rowOffset;
-        if (candidateRow < 0 || candidateRow > maxRow) continue;
-        const colDistance = distance - Math.abs(rowOffset);
-        [col - colDistance, col + colDistance].forEach((candidateCol) => {
-          if (candidateCol < 0 || candidateCol >= BOARD_GRID_COLUMNS) return;
-          candidates.push({ row: candidateRow, col: candidateCol });
-        });
-      }
-      candidates.sort((a, b) => Math.abs(a.row - row) - Math.abs(b.row - row) || Math.abs(a.col - col) - Math.abs(b.col - col) || a.row - b.row || a.col - b.col);
-      const free = candidates.find((candidate) => !occupied.has(slotKey(candidate.row, candidate.col)));
-      if (free) return free;
+    if (!occupied.has(slotKey(0, col))) return { row: 0, col };
+    for (let distance = 1; distance < BOARD_GRID_COLUMNS; distance += 1) {
+      const candidates = [col - distance, col + distance]
+        .filter((candidateCol) => candidateCol >= 0 && candidateCol < BOARD_GRID_COLUMNS);
+      const freeCol = candidates.find((candidateCol) => !occupied.has(slotKey(0, candidateCol)));
+      if (freeCol != null) return { row: 0, col: freeCol };
     }
-    return { row: maxRow + 1, col: 0 };
+    return null;
   }
 
   function reflowTier(tier) {
@@ -467,21 +452,29 @@
     const zone = tierZones.find((item) => Number(item.dataset.tier) === Number(tier));
     const rowElement = zone?.closest('.score-row');
     const occupied = new Set();
+    const overflow = [];
     markers.forEach((marker) => {
       const desired = inferredSlot(marker);
-      const slot = findNearestFreeSlot(occupied, desired.col, desired.row);
-      occupied.add(slotKey(slot.row, slot.col));
+      const slot = findNearestFreeSlot(occupied, desired.col);
+      if (!slot) {
+        overflow.push(marker);
+        return;
+      }
+      occupied.add(slotKey(0, slot.col));
       marker.gridCol = slot.col;
-      marker.gridRow = slot.row;
-      marker.layoutOrder = slot.row * BOARD_GRID_COLUMNS + slot.col;
+      marker.gridRow = 0;
+      marker.layoutOrder = slot.col;
+      marker.x = (slot.col + .5) / BOARD_GRID_COLUMNS;
+      marker.y = .5;
     });
-    const maxRow = markers.reduce((max, marker) => Math.max(max, Number(marker.gridRow) || 0), 0);
-    const rowHeight = maxRow === 0 ? 190 : Math.max(190, (maxRow + 1) * 100 + 20);
-    if (rowElement) rowElement.style.height = `${rowHeight}px`;
-    markers.forEach((marker) => {
-      marker.x = (marker.gridCol + .5) / BOARD_GRID_COLUMNS;
-      marker.y = maxRow === 0 ? .5 : (60 + marker.gridRow * 100) / rowHeight;
+    overflow.forEach((marker) => {
+      marker.tier = null;
+      marker.gridCol = null;
+      marker.gridRow = null;
+      marker.layoutOrder = 0;
+      scoreSelectedMarkerIds.delete(marker.id);
     });
+    if (rowElement) rowElement.style.height = '190px';
   }
 
   function reflowAllTiers() {
@@ -490,38 +483,33 @@
 
   function dropSlotForPoint(zone, x, y, markerIds) {
     const rect = zone.getBoundingClientRect();
-    const excluded = new Set((Array.isArray(markerIds) ? markerIds : [markerIds]).map(String));
-    const current = sortedTierMarkers(Number(zone.dataset.tier)).filter((marker) => !excluded.has(marker.id));
-    const maxRow = current.reduce((max, marker) => Math.max(max, Number(marker.gridRow) || 0), 0);
-    const rowCount = Math.max(1, maxRow + 1);
     const col = clamp(Math.floor(((x - rect.left) / Math.max(1, rect.width)) * BOARD_GRID_COLUMNS), 0, BOARD_GRID_COLUMNS - 1);
-    const row = rowCount === 1
-      ? 0
-      : clamp(Math.floor(((y - rect.top) / Math.max(1, rect.height)) * rowCount), 0, rowCount - 1);
-    return { row, col };
+    return { row: 0, col };
   }
 
-  function placeMarkersAtSlot(markerIds, tier, targetCol, targetRow = 0) {
+  function placeMarkersAtSlot(markerIds, tier, targetCol) {
     const ids = [...new Set(markerIds.map(String))];
     const moving = orderedMarkers(ids);
     if (!moving.length) return false;
     const oldTiers = new Set(moving.map((marker) => marker.tier).filter((value) => value != null));
     const idSet = new Set(ids);
     const destination = sortedTierMarkers(tier).filter((marker) => !idSet.has(marker.id));
-    const occupied = new Set(destination.map((marker) => {
-      const slot = inferredSlot(marker);
-      return slotKey(slot.row, slot.col);
-    }));
+    const occupied = new Set(destination.map((marker) => slotKey(0, inferredSlot(marker).col)));
+    const planned = [];
     moving.forEach((marker, index) => {
-      const linear = Math.max(0, targetRow) * BOARD_GRID_COLUMNS + Math.max(0, targetCol) + index;
-      const desiredRow = Math.floor(linear / BOARD_GRID_COLUMNS);
-      const desiredCol = linear % BOARD_GRID_COLUMNS;
-      const slot = findNearestFreeSlot(occupied, desiredCol, desiredRow);
-      occupied.add(slotKey(slot.row, slot.col));
+      if (planned.length !== index) return;
+      const desiredCol = clamp(Number(targetCol) + index, 0, BOARD_GRID_COLUMNS - 1);
+      const slot = findNearestFreeSlot(occupied, desiredCol);
+      if (!slot) return;
+      occupied.add(slotKey(0, slot.col));
+      planned.push({ marker, slot });
+    });
+    if (planned.length !== moving.length) return false;
+    planned.forEach(({ marker, slot }) => {
       marker.tier = Number(tier);
       marker.gridCol = slot.col;
-      marker.gridRow = slot.row;
-      marker.layoutOrder = slot.row * BOARD_GRID_COLUMNS + slot.col;
+      marker.gridRow = 0;
+      marker.layoutOrder = slot.col;
       marker.updatedAt = new Date().toISOString();
     });
     oldTiers.forEach((oldTier) => { if (oldTier !== Number(tier)) reflowTier(oldTier); });
@@ -534,9 +522,10 @@
     const movingIds = new Set(markerIds.map(String));
     const occupied = new Set(sortedTierMarkers(tier)
       .filter((marker) => !movingIds.has(marker.id))
-      .map((marker) => slotKey(Number(marker.gridRow) || 0, Number(marker.gridCol) || 0)));
-    const first = findNearestFreeSlot(occupied, 0, 0);
-    return placeMarkersAtSlot(markerIds, tier, first.col, first.row);
+      .map((marker) => slotKey(0, inferredSlot(marker).col)));
+    const first = findNearestFreeSlot(occupied, 0);
+    if (!first) return false;
+    return placeMarkersAtSlot(markerIds, tier, first.col);
   }
 
   function placeMarkerInTier(markerId, tier) {
@@ -740,8 +729,10 @@
     if (zone) {
       const tier = Number(zone.dataset.tier);
       const slot = dropSlotForPoint(zone, x, y, movingIds);
-      placeMarkersAtSlot(movingIds, tier, slot.col, slot.row);
-      showToast(movingIds.length > 1 ? `${movingIds.length}개 제약을 ${tier}점 구역의 선택한 위치에 함께 배치했습니다.` : `${tier}점 구역의 선택한 위치에 배치했습니다.`);
+      const placed = placeMarkersAtSlot(movingIds, tier, slot.col);
+      showToast(placed
+        ? (movingIds.length > 1 ? `${movingIds.length}개 제약을 ${tier}점 구역의 빈 칸에 함께 배치했습니다.` : `${tier}점 구역의 빈 칸에 배치했습니다.`)
+        : `${tier}점 구역에 필요한 빈 칸이 없습니다.`);
     } else if (y > boardRect.bottom - 4 || overTray) {
       unplaceMarkers(movingIds);
       showToast(movingIds.length > 1 ? `${movingIds.length}개 제약을 현황판에서 제거하고 미배치 보관함으로 옮겼습니다.` : '현황판에서 제거하고 미배치 보관함으로 옮겼습니다.');
@@ -1152,10 +1143,14 @@
       const marker = getMarker(button.dataset.placeMarker);
       const tier = Number(button.dataset.placeTier);
       if (!marker || marker.tier != null) return;
-      placeMarkerInTier(marker.id, tier);
+      const placed = placeMarkerInTier(marker.id, tier);
       renderMarkers();
-      scheduleSave();
-      showToast(`${marker.label}을(를) ${tier}점 구역에 배치했습니다.`);
+      if (placed) {
+        scheduleSave();
+        showToast(`${marker.label}을(를) ${tier}점 구역의 빈 칸에 배치했습니다.`);
+      } else {
+        showToast(`${tier}점 구역에 빈 칸이 없습니다.`);
+      }
     }));
   }
 
