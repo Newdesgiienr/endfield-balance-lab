@@ -29,6 +29,7 @@
   const backdrop = document.getElementById('modal-backdrop');
   const autosaveStatus = document.getElementById('autosave-status');
   const boardDropHint = document.getElementById('board-drop-hint');
+  const boardFilterCount = document.getElementById('board-filter-count');
   const tierZones = [...document.querySelectorAll('.tier-dropzone')];
 
   let state = loadCurrentState();
@@ -45,6 +46,8 @@
   const scoreSelectedMarkerIds = new Set();
   let pendingScoreSelectionTimer = null;
   let pendingScoreSelectionId = null;
+  let boardCategoryFilter = 'all';
+  let boardScoreFilter = 'all';
 
   function esc(value) {
     return String(value ?? '')
@@ -211,12 +214,67 @@
     </section>`;
   }
 
+  function markerMatchesBoardFilter(marker) {
+    if (!marker || marker.tier == null) return false;
+    const categoryMatches = boardCategoryFilter === 'all' || marker.category === boardCategoryFilter;
+    const scoreMatches = boardScoreFilter === 'all' || marker.tier === Number(boardScoreFilter);
+    return categoryMatches && scoreMatches;
+  }
+
+  function applyBoardFilters() {
+    let visibleCount = 0;
+    tierZones.forEach((zone) => {
+      const tier = Number(zone.dataset.tier);
+      const row = zone.closest('.score-row');
+      const scoreRowVisible = boardScoreFilter === 'all' || tier === Number(boardScoreFilter);
+      row.classList.toggle('is-score-filtered-out', !scoreRowVisible);
+      if (!scoreRowVisible) return;
+      const allMarkers = sortedTierMarkers(tier);
+      const visibleMarkers = allMarkers.filter(markerMatchesBoardFilter);
+      visibleCount += visibleMarkers.length;
+      const rows = Math.max(1, Math.ceil(visibleMarkers.length / BOARD_GRID_COLUMNS));
+      const rowHeight = visibleMarkers.length === 0 ? 150 : (rows === 1 ? 190 : Math.max(190, rows * 100 + 20));
+      row.style.height = `${rowHeight}px`;
+      const visibleIndex = new Map(visibleMarkers.map((marker, index) => [marker.id, index]));
+      allMarkers.forEach((marker) => {
+        const element = zone.querySelector(`[data-marker-id="${CSS.escape(marker.id)}"]`);
+        if (!element) return;
+        const index = visibleIndex.get(marker.id);
+        const hidden = index == null;
+        element.classList.toggle('is-board-filtered-out', hidden);
+        element.setAttribute('aria-hidden', String(hidden));
+        if (hidden) return;
+        const col = index % BOARD_GRID_COLUMNS;
+        const gridRow = Math.floor(index / BOARD_GRID_COLUMNS);
+        const x = (col + .5) / BOARD_GRID_COLUMNS;
+        const y = rows === 1 ? .5 : (60 + gridRow * 100) / rowHeight;
+        element.style.left = `${x * 100}%`;
+        element.style.top = `${y * 100}%`;
+      });
+    });
+    if (boardFilterCount) boardFilterCount.textContent = `표시 ${visibleCount}개`;
+  }
+
+  function syncBoardFilterButtons() {
+    document.querySelectorAll('[data-board-category-filter]').forEach((button) => {
+      const active = button.dataset.boardCategoryFilter === boardCategoryFilter;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    document.querySelectorAll('[data-board-score-filter]').forEach((button) => {
+      const active = button.dataset.boardScoreFilter === boardScoreFilter;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
   function renderMarkers() {
     reflowAllTiers();
     tierZones.forEach((zone) => {
       const tier = Number(zone.dataset.tier);
       zone.innerHTML = sortedTierMarkers(tier).map((marker) => markerHtml(marker, 'board')).join('');
     });
+    applyBoardFilters();
     const unplaced = state.markers.filter((marker) => marker.tier == null);
     const trayMarkers = state.trayViewAll ? state.markers : unplaced;
     tray.innerHTML = CATEGORY_ORDER.map((category) => trayGroupHtml(category, trayMarkers.filter((marker) => marker.category === category), state.trayViewAll)).join('');
@@ -716,7 +774,7 @@
 
   function markerCenter(id) {
     const element = document.querySelector(`.board-marker[data-marker-id="${CSS.escape(id)}"]`);
-    if (!element) return null;
+    if (!element || element.classList.contains('is-board-filtered-out') || element.closest('.score-row')?.classList.contains('is-score-filtered-out')) return null;
     const boardRect = board.getBoundingClientRect();
     const rect = element.getBoundingClientRect();
     return { x: rect.left - boardRect.left + rect.width / 2, y: rect.top - boardRect.top + rect.height / 2 };
@@ -736,7 +794,7 @@
   }
 
   function renderRelations() {
-    const visible = state.relations.filter((relation) => state.relationVisibility?.[relation.type] !== false && getMarker(relation.a)?.tier != null && getMarker(relation.b)?.tier != null);
+    const visible = state.relations.filter((relation) => state.relationVisibility?.[relation.type] !== false && markerMatchesBoardFilter(getMarker(relation.a)) && markerMatchesBoardFilter(getMarker(relation.b)));
     let html = '';
     visible.forEach((relation) => {
       const a = markerCenter(relation.a);
@@ -1058,6 +1116,20 @@
     synergyToggle.checked = state.relationVisibility?.synergy !== false;
   }
 
+  document.querySelectorAll('[data-board-category-filter]').forEach((button) => button.addEventListener('click', () => {
+    boardCategoryFilter = button.dataset.boardCategoryFilter || 'all';
+    syncBoardFilterButtons();
+    applyBoardFilters();
+    requestAnimationFrame(renderRelations);
+  }));
+
+  document.querySelectorAll('[data-board-score-filter]').forEach((button) => button.addEventListener('click', () => {
+    boardScoreFilter = button.dataset.boardScoreFilter || 'all';
+    syncBoardFilterButtons();
+    applyBoardFilters();
+    requestAnimationFrame(renderRelations);
+  }));
+
   conflictToggle.addEventListener('change', () => {
     state.relationVisibility.conflict = conflictToggle.checked;
     renderRelations();
@@ -1243,6 +1315,7 @@
 
   function renderAll() {
     syncRelationVisibilityControls();
+    syncBoardFilterButtons();
     renderMarkers();
     renderRecommendations();
     renderVersions();

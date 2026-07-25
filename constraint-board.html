@@ -6,7 +6,7 @@
   <meta name="description" content="제약 마크를 1·2·3점 현황판에 배치하고 충돌·시너지 관계와 버전별 설계 기록을 관리하는 Endfield Balance Lab 제약 설계 페이지">
   <title>제약 설계 | Endfield Balance Lab</title>
   <link rel="stylesheet" href="styles.css?v=68">
-  <link rel="stylesheet" href="constraint-board.css?v=71">
+  <link rel="stylesheet" href="constraint-board.css?v=72">
 </head>
 <body>
   <header class="app-topbar">
@@ -54,7 +54,7 @@
         </div>
       </div>
       <div class="board-instruction">
-        <span>드래그: 배치·이동</span><span>빠르게 두 번 누르기: 총점 포함/제외</span><span>SHIFT+클릭: 여러 마크 선택</span><span>선택 마크 드래그: 함께 이동</span><span>아래로 끌기: 현황판에서 제거</span><span>길게 누르기: 충돌 연결</span><span>빠르게 세 번 누르기: 시너지 연결</span><button id="clear-marker-selection" class="selection-clear-button" type="button" hidden>선택 해제</button><strong id="marker-selection-status" class="marker-selection-status" aria-live="polite">선택 없음</strong>
+        <span>드래그: 배치·이동</span><span>빠르게 두 번 누르기: 총점 포함/제외</span><span>SHIFT+클릭: 여러 마크 선택</span><span>선택 마크 드래그: 함께 이동</span><span>아래로 끌기: 현황판에서 제거</span><span>길게 누르기: 충돌 연결</span><span>빠르게 세 번 누르기: 시너지 연결</span><button id="clear-marker-selection" class="selection-clear-button" type="button" hidden>선택 해제</button><strong id="marker-selection-status" class="marker-selection-status" aria-live="polite" hidden>선택 없음</strong><span class="board-unplace-note">마크를 현황판 아래로 끌어 놓으면 미배치 보관함으로 돌아갑니다.</span>
       </div>
       <div id="constraint-board-scroll" class="constraint-board-scroll">
         <div id="constraint-board" class="constraint-board" aria-label="제약 마크 배치 현황판">
@@ -64,7 +64,22 @@
           <section class="score-row score-row-3" data-tier="3" aria-label="3점 제약 구역"><strong class="score-label">3<small>★</small></strong><div class="tier-dropzone" data-tier="3"></div></section>
         </div>
       </div>
-      <div id="board-drop-hint" class="board-drop-hint">마크를 현황판 아래로 끌어 놓으면 미배치 보관함으로 돌아갑니다.</div>
+      <div id="board-drop-hint" class="board-drop-hint board-filter-bar" aria-label="현황판 제약 표시 필터">
+        <div class="board-filter-group" role="group" aria-label="카테고리 필터">
+          <button type="button" class="active" data-board-category-filter="all" aria-pressed="true">전체</button>
+          <button type="button" data-board-category-filter="팀" aria-pressed="false">팀</button>
+          <button type="button" data-board-category-filter="조작" aria-pressed="false">조작</button>
+          <button type="button" data-board-category-filter="환경" aria-pressed="false">환경</button>
+          <button type="button" data-board-category-filter="적" aria-pressed="false">적</button>
+        </div>
+        <div class="board-filter-group board-score-filter-group" role="group" aria-label="점수 필터">
+          <button type="button" class="active" data-board-score-filter="all" aria-pressed="true">모든 점수</button>
+          <button type="button" data-board-score-filter="1" aria-pressed="false">1점</button>
+          <button type="button" data-board-score-filter="2" aria-pressed="false">2점</button>
+          <button type="button" data-board-score-filter="3" aria-pressed="false">3점</button>
+        </div>
+        <span id="board-filter-count" class="board-filter-count" aria-live="polite">표시 0개</span>
+      </div>
     </section>
 
     <div class="marker-management-grid">
@@ -149,6 +164,6 @@
   <script src="saved-analyses.js?v=64"></script>
   <script src="analysis-store.js?v=63"></script>
   <script src="constraint-data.js?v=59"></script>
-  <script src="constraint-board.js?v=71"></script>
+  <script src="constraint-board.js?v=72"></script>
 </body>
 </html>
