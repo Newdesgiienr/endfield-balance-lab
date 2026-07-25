@@ -2,11 +2,11 @@
   'use strict';
 
   const STORE = window.AnalysisStore || { getAll: () => [] };
-  const CATALOG = Array.isArray(window.CONSTRAINT_CATALOG) ? window.CONSTRAINT_CATALOG : [];
+  const CATEGORY_ORDER = ['팀', '조작', '환경'];
+  const CATALOG = (Array.isArray(window.CONSTRAINT_CATALOG) ? window.CONSTRAINT_CATALOG : []).filter((item) => CATEGORY_ORDER.includes(item?.category));
   const CURRENT_KEY = 'endfield.constraintBoard.current.v1';
   const VERSION_KEY = 'endfield.constraintBoard.versions.v1';
-  const CATEGORY_ORDER = ['팀', '조작', '환경', '적'];
-  const CATEGORY_CLASS = { 팀: 'team', 조작: 'control', 환경: 'env', 적: 'enemy' };
+  const CATEGORY_CLASS = { 팀: 'team', 조작: 'control', 환경: 'env' };
   const BOARD_GRID_COLUMNS = 8;
   const analyses = STORE.getAll();
 
@@ -91,7 +91,9 @@
 
   function normalizeState(input) {
     const source = input && typeof input === 'object' ? input : blankState();
-    const markers = Array.isArray(source.markers) ? source.markers.map((item, index) => ({
+    const markers = Array.isArray(source.markers) ? source.markers
+      .filter((item) => !item?.category || CATEGORY_ORDER.includes(item.category))
+      .map((item, index) => ({
       id: String(item.id || uid('constraint')),
       category: CATEGORY_ORDER.includes(item.category) ? item.category : '팀',
       label: String(item.label || item.title || '새 제약').slice(0, 18),

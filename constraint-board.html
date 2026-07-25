@@ -6,7 +6,7 @@
   <meta name="description" content="제약 마크를 1·2·3점 현황판에 배치하고 충돌·시너지 관계와 버전별 설계 기록을 관리하는 Endfield Balance Lab 제약 설계 페이지">
   <title>제약 설계 | Endfield Balance Lab</title>
   <link rel="stylesheet" href="styles.css?v=68">
-  <link rel="stylesheet" href="constraint-board.css?v=73">
+  <link rel="stylesheet" href="constraint-board.css?v=74">
 </head>
 <body>
   <header class="app-topbar">
@@ -59,7 +59,6 @@
           <button type="button" data-board-category-filter="팀" aria-pressed="false">팀</button>
           <button type="button" data-board-category-filter="조작" aria-pressed="false">조작</button>
           <button type="button" data-board-category-filter="환경" aria-pressed="false">환경</button>
-          <button type="button" data-board-category-filter="적" aria-pressed="false">적</button>
         </div>
         <div class="board-filter-group board-score-filter-group" role="group" aria-label="점수 필터">
           <button type="button" class="active" data-board-score-filter="all" aria-pressed="true">모든 점수</button>
@@ -86,7 +85,7 @@
       <section class="work-panel marker-create-panel" aria-labelledby="marker-work-title">
         <header class="work-panel-heading"><div><small>CREATE</small><h2 id="marker-work-title">제약 마크 제작</h2></div></header>
         <form id="marker-create-form" class="marker-form compact-marker-form">
-          <label><span>카테고리</span><select id="marker-category" required><option value="팀">팀</option><option value="조작">조작</option><option value="환경">환경</option><option value="적">적</option></select></label>
+          <label><span>카테고리</span><select id="marker-category" required><option value="팀">팀</option><option value="조작">조작</option><option value="환경">환경</option></select></label>
           <label><span>마크에 표시할 글자</span><input id="marker-label" maxlength="18" required placeholder="예: 교대 [2회]"></label>
           <label><span>제약명</span><input id="marker-title" maxlength="48" required placeholder="예: 캐릭터 교대 제한"></label>
           <label><span>상세 설명</span><textarea id="marker-description" rows="5" required placeholder="예: 캐릭터 교대 횟수를 [2회]로 제한합니다. [ ] 안의 값은 굵게 표시됩니다."></textarea></label>
@@ -105,7 +104,7 @@
       <div class="recommendation-toolbar">
         <label class="board-search"><span>⌕</span><input id="recommendation-search" type="search" placeholder="제약명·내용·근거 검색"></label>
         <div id="recommendation-filters" class="recommendation-filters" role="group" aria-label="추천 제약 카테고리 필터">
-          <button type="button" class="active" data-category="all">전체</button><button type="button" data-category="팀">팀</button><button type="button" data-category="조작">조작</button><button type="button" data-category="환경">환경</button><button type="button" data-category="적">적</button>
+          <button type="button" class="active" data-category="all">전체</button><button type="button" data-category="팀">팀</button><button type="button" data-category="조작">조작</button><button type="button" data-category="환경">환경</button>
         </div>
       </div>
       <div id="recommendation-list" class="recommendation-list"></div>
@@ -134,7 +133,7 @@
     <header><div><small>EDIT CONSTRAINT</small><h2 id="marker-edit-title">제약 마크 수정</h2></div><button type="button" data-close-modal aria-label="닫기">×</button></header>
     <form id="marker-edit-form" class="marker-form modal-form">
       <input id="edit-marker-id" type="hidden">
-      <label><span>카테고리</span><select id="edit-marker-category" required><option value="팀">팀</option><option value="조작">조작</option><option value="환경">환경</option><option value="적">적</option></select></label>
+      <label><span>카테고리</span><select id="edit-marker-category" required><option value="팀">팀</option><option value="조작">조작</option><option value="환경">환경</option></select></label>
       <label><span>마크에 표시할 글자</span><input id="edit-marker-label" maxlength="18" required></label>
       <label><span>제약명</span><input id="edit-marker-title" maxlength="48" required></label>
       <label class="marker-form-wide"><span>상세 설명</span><textarea id="edit-marker-description" rows="5" required></textarea></label>
@@ -163,7 +162,7 @@
 
   <script src="saved-analyses.js?v=64"></script>
   <script src="analysis-store.js?v=63"></script>
-  <script src="constraint-data.js?v=59"></script>
-  <script src="constraint-board.js?v=73"></script>
+  <script src="constraint-data.js?v=74"></script>
+  <script src="constraint-board.js?v=74"></script>
 </body>
 </html>

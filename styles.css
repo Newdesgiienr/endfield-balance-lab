@@ -2845,7 +2845,6 @@ a { color: inherit; text-decoration: none; }
 .constraint-recommendation-card[data-category="팀"] .constraint-recommendation-copy header h2 { color: #b84839; }
 .constraint-recommendation-card[data-category="조작"] .constraint-recommendation-copy header h2 { color: #6551a3; }
 .constraint-recommendation-card[data-category="환경"] .constraint-recommendation-copy header h2 { color: #177f87; }
-.constraint-recommendation-card[data-category="적"] .constraint-recommendation-copy header h2 { color: #b46822; }
 .constraint-copy-stack { display: grid; gap: 12px; padding-top: 14px; }
 .constraint-copy-stack p { margin: 0; color: var(--text); font-size: 14px; line-height: 1.78; }
 .constraint-copy-stack strong { color: var(--ink); font-size: 14px; }

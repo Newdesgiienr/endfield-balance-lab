@@ -2,7 +2,8 @@
   'use strict';
 
   const STORE = window.AnalysisStore || { getAll: () => [] };
-  const CATALOG = Array.isArray(window.CONSTRAINT_CATALOG) ? window.CONSTRAINT_CATALOG : [];
+  const CATEGORY_ORDER = ['팀', '조작', '환경'];
+  const CATALOG = (Array.isArray(window.CONSTRAINT_CATALOG) ? window.CONSTRAINT_CATALOG : []).filter((item) => CATEGORY_ORDER.includes(item?.category));
   const ASSETS = window.SKPORT_ASSETS || {};
 
   function esc(value) {
@@ -89,7 +90,7 @@
         categoryCounts.set(item.category, count + 1);
       }
     });
-    ['팀', '조작', '환경', '적'].forEach((category) => {
+    CATEGORY_ORDER.forEach((category) => {
       if (output.some((item) => item.category === category)) return;
       const fallback = selected.find((item) => item.category === category);
       if (fallback) output.push(fallback);
@@ -142,7 +143,7 @@
 
   function recommendationsHtml(analyses) {
     const items = recommend(analyses);
-    return `${aggregateSummary(analyses)}<div class="constraint-filter-row" role="group" aria-label="제약 카테고리 필터"><button type="button" class="active" data-constraint-filter="all">전체</button><button type="button" data-constraint-filter="팀">팀</button><button type="button" data-constraint-filter="조작">조작</button><button type="button" data-constraint-filter="환경">환경</button><button type="button" data-constraint-filter="적">적</button></div><section id="constraint-recommendation-list" class="constraint-recommendation-list">${items.map((item) => constraintCard(item, analyses)).join('')}</section>`;
+    return `${aggregateSummary(analyses)}<div class="constraint-filter-row" role="group" aria-label="제약 카테고리 필터"><button type="button" class="active" data-constraint-filter="all">전체</button><button type="button" data-constraint-filter="팀">팀</button><button type="button" data-constraint-filter="조작">조작</button><button type="button" data-constraint-filter="환경">환경</button></div><section id="constraint-recommendation-list" class="constraint-recommendation-list">${items.map((item) => constraintCard(item, analyses)).join('')}</section>`;
   }
 
   function render() {

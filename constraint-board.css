@@ -8,7 +8,6 @@
   --cat-team: #4f8cff;
   --cat-control: #f59e0b;
   --cat-env: #2fbf71;
-  --cat-enemy: #ef5b5b;
   --relation-conflict: #e14343;
   --relation-synergy: #d9ac32;
 }
@@ -57,7 +56,6 @@
 .board-marker[data-category="팀"], .tray-marker[data-category="팀"] { --category-color:var(--cat-team); }
 .board-marker[data-category="조작"], .tray-marker[data-category="조작"] { --category-color:var(--cat-control); }
 .board-marker[data-category="환경"], .tray-marker[data-category="환경"] { --category-color:var(--cat-env); }
-.board-marker[data-category="적"], .tray-marker[data-category="적"] { --category-color:var(--cat-enemy); }
 .marker-category { position:absolute; left:50%; top:-12px; transform:translateX(-50%); min-width:48px; padding:3px 10px; border-radius:999px; background:var(--category-color); color:#fff; box-shadow:0 4px 10px rgba(0,0,0,.25); text-align:center; font-size:10px; font-weight:950; letter-spacing:.08em; white-space:nowrap; }
 .marker-label { display:flex; align-items:center; justify-content:center; min-height:78px; padding:17px 18px 11px; text-align:center; font-size:15px; font-weight:900; line-height:1.25; word-break:keep-all; }
 .numeric-token { font-family:Arial,"Roboto Condensed","Noto Sans KR",sans-serif; font-weight:950; letter-spacing:-.02em; }
@@ -93,8 +91,7 @@
 .recommendation-filters button.active { border-color:#263541; background:#263541; color:#fff; }
 .recommendation-list { max-height:640px; overflow:auto; padding:14px 16px 20px; }
 .recommendation-card { position:relative; border:1px solid #dce3e9; border-left:5px solid var(--category-color,#9aa6b1); border-radius:13px; background:#fff; padding:14px 14px 13px; margin-bottom:10px; }
-.recommendation-card[data-category="팀"] { --category-color:var(--cat-team); }.recommendation-card[data-category="조작"] { --category-color:var(--cat-control); }.recommendation-card[data-category="환경"] { --category-color:var(--cat-env); }.recommendation-card[data-category="적"] { --category-color:var(--cat-enemy); }
-.recommendation-card header { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }.recommendation-card h3 { margin:0; color:#263440; font-size:15px; }.recommendation-card header small { color:var(--category-color); font-size:10px; font-weight:950; }
+.recommendation-card[data-category="팀"] { --category-color:var(--cat-team); }.recommendation-card[data-category="조작"] { --category-color:var(--cat-control); }.recommendation-card[data-category="환경"] { --category-color:var(--cat-env); }.recommendation-card header { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }.recommendation-card h3 { margin:0; color:#263440; font-size:15px; }.recommendation-card header small { color:var(--category-color); font-size:10px; font-weight:950; }
 .recommendation-card p { margin:8px 0 0; color:#697682; font-size:12px; line-height:1.6; }
 .recommendation-evidence { padding:8px 10px; border-radius:9px; background:#f4f7f9; }
 .recommendation-meta { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:11px; }.coverage-pill { color:#566572; font-size:10px; font-weight:900; }.add-recommendation { border:0; border-radius:9px; background:#25333f; color:#fff; padding:7px 10px; font:inherit; font-size:11px; font-weight:900; cursor:pointer; }.add-recommendation:hover { background:var(--category-color); }
@@ -115,10 +112,8 @@
 .secondary-button, .danger-button { border:1px solid #d4dde5; border-radius:10px; background:#fff; padding:10px 13px; font:inherit; font-size:12px; font-weight:900; cursor:pointer; }.danger-button { border-color:#f0caca; color:#b63838; background:#fff7f7; }.danger-button:hover { background:#b63838; color:#fff; }.secondary-button:hover { background:#eef2f5; }
 .version-save-form { padding:20px; }.version-save-form label + label { margin-top:13px; }
 .preview-content, .compare-content { padding:20px; }.preview-meta { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }.preview-meta span { padding:6px 9px; border-radius:8px; background:#eef2f5; color:#596875; font-size:11px; font-weight:900; }.preview-memo { margin:0 0 16px; padding:12px 14px; border-radius:11px; background:#f8fafb; color:#667480; font-size:13px; line-height:1.65; }
-.mini-board { position:relative; min-width:650px; border:1px solid #313943; border-radius:12px; overflow:hidden; background:#171c23; }.mini-board-scroll { overflow:auto; }.mini-score-row { position:relative; height:115px; border-bottom:1px solid #3a424d; }.mini-score-row:last-child { border-bottom:0; }.mini-score-row > b { position:absolute; left:0; top:0; bottom:0; width:50px; display:grid; place-items:center; color:#fff; font-size:25px; border-right:1px solid #353e48; }.mini-score-row:nth-child(1)>b { border-left:5px solid #ffd400; }.mini-score-row:nth-child(2)>b { border-left:5px solid #ff9300; }.mini-score-row:nth-child(3)>b { border-left:5px solid #ff284f; }.mini-marker { --category-color:#8a96a0; position:absolute; width:92px; min-height:44px; transform:translate(-50%,-50%); border:1px solid var(--category-color); border-radius:8px; background:#252c35; color:#fff; padding:12px 6px 7px; text-align:center; font-size:9px; font-weight:900; }.mini-marker::before { content:attr(data-category); position:absolute; left:50%; top:-8px; transform:translateX(-50%); border-radius:999px; background:var(--category-color); padding:2px 6px; font-size:7px; }.mini-marker[data-category="팀"]{--category-color:var(--cat-team)}.mini-marker[data-category="조작"]{--category-color:var(--cat-control)}.mini-marker[data-category="환경"]{--category-color:var(--cat-env)}.mini-marker[data-category="적"]{--category-color:var(--cat-enemy)}
-.compare-head { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; margin-bottom:17px; }.compare-version { padding:13px; border-radius:12px; background:#f4f7f9; }.compare-version small { display:block; color:#84909b; font-size:10px; }.compare-version strong { display:block; margin-top:4px; color:#273540; }.compare-arrow { color:#9aa5af; font-size:24px; }.compare-groups { display:grid; grid-template-columns:repeat(2,1fr); gap:13px; }.compare-group { border:1px solid #dce3e9; border-radius:12px; padding:13px; }.compare-group h3 { margin:0 0 9px; font-size:13px; }.compare-group ul { margin:0; padding-left:18px; color:#65727e; font-size:12px; line-height:1.7; }.compare-group.empty ul { list-style:none; padding:0; }.compare-group.empty li { color:#98a2ab; }
-.drag-ghost { --category-color:#8996a2; position:fixed; z-index:120; width:144px; min-height:80px; transform:translate(-50%,-50%) scale(1.04); border:1px solid var(--category-color); border-radius:12px; background:#242b34; color:#fff; box-shadow:0 20px 45px rgba(0,0,0,.38); pointer-events:none; }.drag-ghost[data-category="팀"]{--category-color:var(--cat-team)}.drag-ghost[data-category="조작"]{--category-color:var(--cat-control)}.drag-ghost[data-category="환경"]{--category-color:var(--cat-env)}.drag-ghost[data-category="적"]{--category-color:var(--cat-enemy)}
-@media (max-width:1100px) { .designer-work-grid { grid-template-columns:1fr; }.designer-heading { align-items:flex-start; flex-direction:column; }.designer-heading-actions { width:100%; justify-content:space-between; }.marker-form { grid-template-columns:1fr 1fr; }.marker-form-wide,.create-marker-button { grid-column:1/-1; } }
+.mini-board { position:relative; min-width:650px; border:1px solid #313943; border-radius:12px; overflow:hidden; background:#171c23; }.mini-board-scroll { overflow:auto; }.mini-score-row { position:relative; height:115px; border-bottom:1px solid #3a424d; }.mini-score-row:last-child { border-bottom:0; }.mini-score-row > b { position:absolute; left:0; top:0; bottom:0; width:50px; display:grid; place-items:center; color:#fff; font-size:25px; border-right:1px solid #353e48; }.mini-score-row:nth-child(1)>b { border-left:5px solid #ffd400; }.mini-score-row:nth-child(2)>b { border-left:5px solid #ff9300; }.mini-score-row:nth-child(3)>b { border-left:5px solid #ff284f; }.mini-marker { --category-color:#8a96a0; position:absolute; width:92px; min-height:44px; transform:translate(-50%,-50%); border:1px solid var(--category-color); border-radius:8px; background:#252c35; color:#fff; padding:12px 6px 7px; text-align:center; font-size:9px; font-weight:900; }.mini-marker::before { content:attr(data-category); position:absolute; left:50%; top:-8px; transform:translateX(-50%); border-radius:999px; background:var(--category-color); padding:2px 6px; font-size:7px; }.mini-marker[data-category="팀"]{--category-color:var(--cat-team)}.mini-marker[data-category="조작"]{--category-color:var(--cat-control)}.mini-marker[data-category="환경"]{--category-color:var(--cat-env)}.compare-head { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; margin-bottom:17px; }.compare-version { padding:13px; border-radius:12px; background:#f4f7f9; }.compare-version small { display:block; color:#84909b; font-size:10px; }.compare-version strong { display:block; margin-top:4px; color:#273540; }.compare-arrow { color:#9aa5af; font-size:24px; }.compare-groups { display:grid; grid-template-columns:repeat(2,1fr); gap:13px; }.compare-group { border:1px solid #dce3e9; border-radius:12px; padding:13px; }.compare-group h3 { margin:0 0 9px; font-size:13px; }.compare-group ul { margin:0; padding-left:18px; color:#65727e; font-size:12px; line-height:1.7; }.compare-group.empty ul { list-style:none; padding:0; }.compare-group.empty li { color:#98a2ab; }
+.drag-ghost { --category-color:#8996a2; position:fixed; z-index:120; width:144px; min-height:80px; transform:translate(-50%,-50%) scale(1.04); border:1px solid var(--category-color); border-radius:12px; background:#242b34; color:#fff; box-shadow:0 20px 45px rgba(0,0,0,.38); pointer-events:none; }.drag-ghost[data-category="팀"]{--category-color:var(--cat-team)}.drag-ghost[data-category="조작"]{--category-color:var(--cat-control)}.drag-ghost[data-category="환경"]{--category-color:var(--cat-env)}@media (max-width:1100px) { .designer-work-grid { grid-template-columns:1fr; }.designer-heading { align-items:flex-start; flex-direction:column; }.designer-heading-actions { width:100%; justify-content:space-between; }.marker-form { grid-template-columns:1fr 1fr; }.marker-form-wide,.create-marker-button { grid-column:1/-1; } }
 @media (max-width:700px) { .constraint-designer { padding-inline:12px; }.designer-heading-actions { align-items:stretch; flex-direction:column; }.board-card-heading { align-items:flex-start; flex-direction:column; }.score-row { grid-template-columns:72px 1fr; }.score-label { font-size:45px; }.constraint-board { width:1250px; }.marker-form,.modal-form { grid-template-columns:1fr; }.marker-form-wide,.create-marker-button,.marker-edit-actions { grid-column:1; }.compare-groups { grid-template-columns:1fr; }.compare-head { grid-template-columns:1fr; }.compare-arrow { transform:rotate(90deg); text-align:center; }.version-list { grid-template-columns:1fr; } }
 
 /* v66: compact creation panel, categorized tray, quick placement and relation visibility */
@@ -146,12 +141,11 @@
 .compact-marker-form textarea { min-height:124px; }
 .compact-marker-form .create-marker-button { width:100%; margin-top:auto; justify-self:stretch; }
 .marker-tray-panel .work-panel-heading { min-height:104px; }
-.marker-tray-categories { display:grid; grid-template-columns:repeat(4,minmax(220px,1fr)); gap:12px; min-height:330px; padding:15px 17px 20px; overflow-x:auto; background:#fbfcfd; }
+.marker-tray-categories { display:grid; grid-template-columns:repeat(3,minmax(220px,1fr)); gap:12px; min-height:330px; padding:15px 17px 20px; overflow-x:auto; background:#fbfcfd; }
 .tray-category { --category-color:#8b97a2; min-width:220px; box-sizing:border-box; border:2px solid var(--category-color); border-radius:15px; background:#fff; overflow:hidden; box-shadow:0 0 0 1px color-mix(in srgb,var(--category-color) 12%,transparent); }
 .tray-category[data-category="팀"] { --category-color:var(--cat-team); }
 .tray-category[data-category="조작"] { --category-color:var(--cat-control); }
 .tray-category[data-category="환경"] { --category-color:var(--cat-env); }
-.tray-category[data-category="적"] { --category-color:var(--cat-enemy); }
 .tray-category > header { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 13px 11px; border-bottom:2px solid var(--category-color); background:color-mix(in srgb,var(--category-color) 7%,white 93%); }
 .tray-category > header div { display:flex; align-items:baseline; gap:7px; }
 .tray-category > header span { color:#293641; font-size:14px; font-weight:950; }
@@ -173,12 +167,11 @@
 .placement-modal { width:min(1180px,calc(100vw - 30px)); }
 .placement-modal-body { padding:18px 20px 22px; }
 .placement-modal-body > p { margin:0 0 15px; padding:11px 13px; border-radius:11px; background:#f4f7f9; color:#64727e; font-size:12px; line-height:1.65; }
-.placement-marker-list { display:grid; grid-template-columns:repeat(4,minmax(220px,1fr)); gap:12px; overflow-x:auto; }
+.placement-marker-list { display:grid; grid-template-columns:repeat(3,minmax(220px,1fr)); gap:12px; overflow-x:auto; }
 .placement-category { --category-color:#8b97a2; min-width:220px; box-sizing:border-box; border:2px solid var(--category-color); border-radius:14px; overflow:hidden; background:#fbfcfd; box-shadow:0 0 0 1px color-mix(in srgb,var(--category-color) 10%,transparent); }
 .placement-category[data-category="팀"] { --category-color:var(--cat-team); }
 .placement-category[data-category="조작"] { --category-color:var(--cat-control); }
 .placement-category[data-category="환경"] { --category-color:var(--cat-env); }
-.placement-category[data-category="적"] { --category-color:var(--cat-enemy); }
 .placement-category > header { display:flex; align-items:center; justify-content:space-between; padding:11px 12px; border-bottom:2px solid var(--category-color); background:#fff; }
 .placement-category > header strong { color:#26333f; font-size:14px; }
 .placement-category > header span { color:var(--category-color); font-size:10px; font-weight:950; }
@@ -198,14 +191,14 @@
 
 @media (max-width:1280px) {
   .marker-management-grid { grid-template-columns:300px minmax(0,1fr); }
-  .marker-tray-categories, .placement-marker-list { grid-template-columns:repeat(4,minmax(205px,1fr)); }
+  .marker-tray-categories, .placement-marker-list { grid-template-columns:repeat(3,minmax(205px,1fr)); }
   .recommendation-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:900px) {
   .board-heading-tools { width:100%; justify-content:flex-start; }
   .marker-management-grid { grid-template-columns:1fr; }
   .compact-marker-form { height:auto; }
-  .marker-tray-categories { grid-template-columns:repeat(4,minmax(210px,1fr)); }
+  .marker-tray-categories { grid-template-columns:repeat(3,minmax(210px,1fr)); }
   .recommendation-work-panel .recommendation-toolbar { align-items:stretch; flex-direction:column; }
   .recommendation-work-panel .board-search { max-width:none; }
   .recommendation-work-panel .recommendation-filters { margin-top:0; }
@@ -215,7 +208,7 @@
   .relation-switch { flex:1; justify-content:center; }
   .board-place-button { width:100%; }
   .recommendation-list { grid-template-columns:1fr; }
-  .placement-marker-list { grid-template-columns:repeat(4,minmax(205px,1fr)); }
+  .placement-marker-list { grid-template-columns:repeat(3,minmax(205px,1fr)); }
 }
 
 /* v67: multi-selection, all-constraint storage, readable typography, draggable right drawer */

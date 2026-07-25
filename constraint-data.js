@@ -96,47 +96,5 @@ window.CONSTRAINT_CATALOG = [
     feature: '전장 일부에 지속 피해나 이동을 강요하는 위험 지대를 추가합니다.',
     description: '특정 캐릭터 메커니즘이 아니라 위치 선정과 조작 유연성을 시험하는 기본 제약입니다.',
     impact: '고정 위치에서 준비하는 스킬과 긴 시전 구간의 안정성이 낮아지고 이동 중 운용 능력이 중요해집니다.'
-  },
-  {
-    id: 'enemy-max-hp-increase', category: '적', label: '최대 체력 증가', baseline: true,
-    matchAny: ['화력', '궁극기', '마무리', '집중', '피해'],
-    feature: '적의 최대 체력을 높여 한 번의 폭발 구간으로 전투를 끝내기 어렵게 만듭니다.',
-    description: '같은 제약을 적용 계수에 따라 1·2·3단계로 강화할 수 있습니다.',
-    impact: '첫 순환 이후 자원 회복, 부착 재준비, 두 번째 순환의 안정성이 중요해집니다.'
-  },
-  {
-    id: 'enemy-damage-increase', category: '적', label: '공격 피해 증가', baseline: true,
-    matchAny: ['생존', '치유', '보호', '메인 컨트롤'],
-    feature: '적이 주는 피해를 높여 실수 허용 범위와 생존 여유를 줄입니다.',
-    description: '캐릭터 메커니즘과 무관하게 파티의 기본 생존 안정성을 시험하는 제약입니다.',
-    impact: '회피, 제어, 보호, 치유와 빠른 처치 능력의 균형이 중요해집니다.'
-  },
-  {
-    id: 'enemy-defense-increase', category: '적', label: '방어력 증가',
-    matchAny: ['취약', '증폭', 'armorBreak', '갑옷 파괴', '방어 불능'],
-    feature: '적의 방어력을 높여 취약·증폭·갑옷 파괴 같은 방어 대응 수단을 요구합니다.',
-    description: '피해 유형 전체를 동일하게 막기보다 방어 대응 메커니즘의 필요성을 단계적으로 높이는 제약입니다.',
-    impact: '지원 캐릭터의 취약·증폭과 방어 불능 소모 효과를 맞추는 타이밍이 중요해집니다.'
-  },
-  {
-    id: 'enemy-stagger-control-resistance', category: '적', label: '경직·제어 저항 증가',
-    matchAny: ['freeze', 'launch', 'knockdown', 'slow', '동결', '띄우기', '넘어뜨리기', '제어'],
-    feature: '적이 경직과 제어 효과에 버티는 정도를 높입니다.',
-    description: '완전 면역이 아니라 적용 시간이나 반복 효율을 단계적으로 줄이는 제약입니다.',
-    impact: '제어에 의존한 안전한 준비 시간이 줄고, 직접 피해와 빠른 상태 전환의 가치가 높아집니다.'
-  },
-  {
-    id: 'enemy-arts-infliction-resistance', category: '적', label: '아츠 부착 저항 증가',
-    matchAny: ['artsInfliction', 'heatInfliction', 'electricInfliction', 'frostInfliction', 'natureInfliction', '아츠 부착', '부착 스택'],
-    feature: '아츠 부착 스택이 쌓이는 속도 또는 유지 효율을 낮춥니다.',
-    description: '부착을 완전히 금지하지 않고 적용 계수에 따라 준비 시간을 늘리는 제약입니다.',
-    impact: '강제 이상, 직접 상태 부여, 낮은 스택에서 작동하는 스킬과 대체 속성 축의 가치가 올라갑니다.'
-  },
-  {
-    id: 'enemy-speed-increase', category: '적', label: '이동·행동 속도 증가', baseline: true,
-    matchAny: ['준비', '시전', '메인 컨트롤', '제어'],
-    feature: '적의 이동 속도와 행동 템포를 높입니다.',
-    description: '특정 파티 메커니즘에 한정하지 않고 조작 대응과 준비 안정성을 시험하는 기본 제약입니다.',
-    impact: '긴 준비 동작, 위치 고정형 스킬, 느린 조건 연결이 압박받고 즉시 대응 가능한 행동의 가치가 높아집니다.'
   }
 ];
