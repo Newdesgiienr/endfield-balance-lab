@@ -689,3 +689,12 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
     text-align: right;
   }
 }
+
+
+/* v73: filters above board, instructions below board, no trailing dark board space */
+.constraint-board { min-height: 0; }
+.board-filter-bar { border-top: 1px solid #e1e7ec; border-bottom: 1px solid #d9e0e6; }
+.constraint-board-scroll { border-top: 0; }
+.board-instruction { padding: 12px 18px 14px; border-top: 1px solid #e1e7ec; background: #fff; }
+.board-instruction.active { background: #fff3d6; }
+.board-unplace-note { display: none !important; }
