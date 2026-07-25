@@ -39,6 +39,7 @@
   let interaction = null;
   let aim = null;
   let activeRelationId = null;
+  let activeGroupId = null;
   let compareSelection = [];
   let recommendationCategory = 'all';
   let recommendationQuery = '';
@@ -83,6 +84,7 @@
       projectId: uid('constraint-project'),
       markers: [],
       relations: [],
+      groups: [],
       relationVisibility: { conflict: true, synergy: true },
       trayViewAll: false,
       updatedAt: new Date().toISOString()
@@ -115,11 +117,18 @@
       a: String(item.a), b: String(item.b), type: item.type,
       createdAt: item.createdAt || new Date().toISOString()
     })) : [];
+    const groups = Array.isArray(source.groups) ? source.groups.map((item) => ({
+      id: String(item?.id || uid('group')),
+      type: item?.type === 'gatekeeper' ? 'gatekeeper' : 'normal',
+      markerIds: [...new Set((Array.isArray(item?.markerIds) ? item.markerIds : []).map(String).filter((id) => ids.has(id)))],
+      createdAt: item?.createdAt || new Date().toISOString()
+    })).filter((item) => item.markerIds.length >= 2) : [];
     return {
       schemaVersion: 1,
       projectId: String(source.projectId || uid('constraint-project')),
       markers,
       relations,
+      groups,
       relationVisibility: {
         conflict: source.relationVisibility?.conflict !== false,
         synergy: source.relationVisibility?.synergy !== false
@@ -295,7 +304,20 @@
       element.addEventListener('keydown', (event) => {
         if (event.shiftKey && (event.key === 'Enter' || event.key === ' ')) {
           event.preventDefault();
+          event.stopPropagation();
           toggleMarkerSelection(element.dataset.markerId);
+          return;
+        }
+        if (selectedMarkerIds.size >= 2 && event.key === 'Enter') {
+          event.preventDefault();
+          event.stopPropagation();
+          createMarkerGroup('normal');
+          return;
+        }
+        if (selectedMarkerIds.size >= 2 && event.key === 'ArrowUp') {
+          event.preventDefault();
+          event.stopPropagation();
+          createMarkerGroup('gatekeeper');
           return;
         }
         if (event.key === 'Enter' || event.key === ' ') {
@@ -336,21 +358,149 @@
     updateSelectionUi();
   }
 
+
+  function groupSignature(markerIds) {
+    return [...new Set(markerIds.map(String))].sort().join('|');
+  }
+
+  function cleanupGroups() {
+    const ids = new Set(state.markers.map((marker) => marker.id));
+    state.groups = (Array.isArray(state.groups) ? state.groups : []).map((group) => ({
+      ...group,
+      markerIds: [...new Set((group.markerIds || []).map(String).filter((id) => ids.has(id)))]
+    })).filter((group) => group.markerIds.length >= 2);
+  }
+
+  function selectedPlacedMarkers() {
+    return orderedMarkers([...selectedMarkerIds]).filter((marker) => marker.tier != null);
+  }
+
+  function createMarkerGroup(type) {
+    const selected = selectedPlacedMarkers();
+    if (selectedMarkerIds.size < 2 || selected.length !== selectedMarkerIds.size) {
+      showToast('현황판에 배치된 제약 마크를 2개 이상 SHIFT로 선택하세요.');
+      return false;
+    }
+    const markerIds = selected.map((marker) => marker.id);
+    const signature = groupSignature(markerIds);
+    const exact = state.groups.find((group) => groupSignature(group.markerIds) === signature);
+    if (exact) {
+      if (exact.type === type) {
+        showToast(type === 'gatekeeper' ? '이미 같은 문지기 묶음이 있습니다.' : '이미 같은 일반 묶음이 있습니다.');
+        return false;
+      }
+      exact.type = type;
+      exact.createdAt = new Date().toISOString();
+      pruneInvalidScoreSelections();
+      renderMarkers();
+      scheduleSave();
+      showToast(type === 'gatekeeper' ? '선택 묶음을 문지기 묶음으로 변경했습니다.' : '선택 묶음을 일반 묶음으로 변경했습니다.');
+      return true;
+    }
+    const selectedSet = new Set(markerIds);
+    const overlap = state.groups.find((group) => (group.markerIds || []).some((id) => selectedSet.has(id)));
+    if (overlap) {
+      showToast('이미 다른 묶음에 포함된 제약이 있습니다. 기존 묶음을 해제한 뒤 다시 묶어주세요.');
+      return false;
+    }
+    state.groups.push({
+      id: uid('group'),
+      type,
+      markerIds,
+      createdAt: new Date().toISOString()
+    });
+    pruneInvalidScoreSelections();
+    renderMarkers();
+    scheduleSave();
+    showToast(type === 'gatekeeper'
+      ? `${markerIds.length}개 제약을 문지기 묶음으로 만들었습니다.`
+      : `${markerIds.length}개 제약을 일반 묶음으로 만들었습니다.`);
+    return true;
+  }
+
+  function markerGroupMembership(id) {
+    return (state.groups || []).filter((group) => (group.markerIds || []).includes(String(id)));
+  }
+
   function cancelPendingScoreSelection() {
     window.clearTimeout(pendingScoreSelectionTimer);
     pendingScoreSelectionTimer = null;
     pendingScoreSelectionId = null;
   }
 
-  function updateScoreSelectionUi() {
+  function conflictingSelectedMarker(markerId, selectedIds = scoreSelectedMarkerIds) {
+    const relation = state.relations.find((item) => item.type === 'conflict' && (
+      (item.a === markerId && selectedIds.has(item.b)) ||
+      (item.b === markerId && selectedIds.has(item.a))
+    ));
+    if (!relation) return null;
+    return getMarker(relation.a === markerId ? relation.b : relation.a);
+  }
+
+  function placedGroupMarkers(group) {
+    return (group?.markerIds || []).map(getMarker).filter((marker) => marker && marker.tier != null);
+  }
+
+  function gatekeeperBlocker(marker, selectedIds = scoreSelectedMarkerIds) {
+    if (!marker || marker.tier == null) return null;
+    const markerCol = inferredSlot(marker).col;
+    for (const group of (state.groups || []).filter((item) => item.type === 'gatekeeper')) {
+      const members = placedGroupMarkers(group);
+      if (members.length < 2 || group.markerIds.includes(marker.id)) continue;
+      const boundaryCol = Math.max(...members.map((item) => inferredSlot(item).col));
+      const opened = members.some((item) => selectedIds.has(item.id));
+      if (!opened && markerCol > boundaryCol) return { group, members, boundaryCol };
+    }
+    return null;
+  }
+
+  function scoreBlockReason(marker, selectedIds = scoreSelectedMarkerIds) {
+    const conflict = conflictingSelectedMarker(marker.id, selectedIds);
+    if (conflict) return `선택한 “${conflict.label}” 제약과 충돌하여 함께 포함할 수 없습니다.`;
+    const gate = gatekeeperBlocker(marker, selectedIds);
+    if (gate) return `왼쪽 문지기 묶음에서 제약을 1개 이상 먼저 선택해야 합니다.`;
+    return '';
+  }
+
+  function pruneInvalidScoreSelections() {
     [...scoreSelectedMarkerIds].forEach((id) => {
       const marker = getMarker(id);
       if (!marker || marker.tier == null) scoreSelectedMarkerIds.delete(id);
     });
+
+    const kept = new Set();
+    [...scoreSelectedMarkerIds].forEach((id) => {
+      const conflict = conflictingSelectedMarker(id, kept);
+      if (conflict) scoreSelectedMarkerIds.delete(id);
+      else kept.add(id);
+    });
+
+    let changed = true;
+    while (changed) {
+      changed = false;
+      [...scoreSelectedMarkerIds].forEach((id) => {
+        const marker = getMarker(id);
+        if (!marker) return;
+        const gate = gatekeeperBlocker(marker, scoreSelectedMarkerIds);
+        if (gate) {
+          scoreSelectedMarkerIds.delete(id);
+          changed = true;
+        }
+      });
+    }
+  }
+
+  function updateScoreSelectionUi() {
+    pruneInvalidScoreSelections();
     document.querySelectorAll('.board-marker[data-marker-id]').forEach((element) => {
+      const marker = getMarker(element.dataset.markerId);
       const selected = scoreSelectedMarkerIds.has(element.dataset.markerId);
+      const reason = marker && !selected ? scoreBlockReason(marker) : '';
       element.classList.toggle('is-score-selected', selected);
+      element.classList.toggle('is-score-blocked', Boolean(reason));
       element.dataset.scoreSelected = String(selected);
+      element.dataset.scoreBlockedReason = reason;
+      element.setAttribute('aria-disabled', String(Boolean(reason)));
     });
     const selected = [...scoreSelectedMarkerIds].map(getMarker).filter((marker) => marker && marker.tier != null);
     const total = selected.reduce((sum, marker) => sum + Number(marker.tier || 0), 0);
@@ -364,8 +514,23 @@
   function toggleScoreSelection(id) {
     const marker = getMarker(id);
     if (!marker || marker.tier == null) return;
-    if (scoreSelectedMarkerIds.has(marker.id)) scoreSelectedMarkerIds.delete(marker.id);
-    else scoreSelectedMarkerIds.add(marker.id);
+    if (scoreSelectedMarkerIds.has(marker.id)) {
+      scoreSelectedMarkerIds.delete(marker.id);
+      const before = scoreSelectedMarkerIds.size;
+      pruneInvalidScoreSelections();
+      const removed = before - scoreSelectedMarkerIds.size;
+      updateScoreSelectionUi();
+      if (removed > 0) showToast(`문지기 선택이 해제되어 오른쪽 제약 ${removed}개도 총점에서 제외했습니다.`);
+      return;
+    }
+    const reason = scoreBlockReason(marker);
+    if (reason) {
+      showToast(reason);
+      updateScoreSelectionUi();
+      return;
+    }
+    scoreSelectedMarkerIds.add(marker.id);
+    pruneInvalidScoreSelections();
     updateScoreSelectionUi();
   }
 
@@ -386,7 +551,8 @@
     if (interaction || aim) return;
     const marker = getMarker(event.currentTarget.dataset.markerId);
     if (!marker) return;
-    tooltip.innerHTML = `<small style="color:var(--cat-${CATEGORY_CLASS[marker.category]})">${esc(marker.category)} CATEGORY</small><strong>${esc(marker.title)}</strong><p>${rich(marker.description || '설명이 없습니다.')}</p>`;
+    const blockedReason = event.currentTarget.dataset.markerLocation === 'board' && !scoreSelectedMarkerIds.has(marker.id) ? scoreBlockReason(marker) : '';
+    tooltip.innerHTML = `<small style="color:var(--cat-${CATEGORY_CLASS[marker.category]})">${esc(marker.category)} CATEGORY</small><strong>${esc(marker.title)}</strong><p>${rich(marker.description || '설명이 없습니다.')}</p>${blockedReason ? `<p class="score-blocked-note">${esc(blockedReason)}</p>` : ''}`;
     tooltip.hidden = false;
     moveTooltip(event);
   }
@@ -517,6 +683,50 @@
     return true;
   }
 
+
+
+  function nearestValidHorizontalDelta(markerIds, requestedDelta) {
+    const moving = orderedMarkers(markerIds).filter((marker) => marker.tier != null);
+    if (!moving.length) return null;
+    const minCol = Math.min(...moving.map((marker) => inferredSlot(marker).col));
+    const maxCol = Math.max(...moving.map((marker) => inferredSlot(marker).col));
+    const minDelta = -minCol;
+    const maxDelta = BOARD_GRID_COLUMNS - 1 - maxCol;
+    const desired = clamp(Math.round(Number(requestedDelta) || 0), minDelta, maxDelta);
+    const candidates = [];
+    for (let delta = minDelta; delta <= maxDelta; delta += 1) candidates.push(delta);
+    candidates.sort((a, b) => Math.abs(a - desired) - Math.abs(b - desired) || Math.abs(a) - Math.abs(b));
+    const movingSet = new Set(markerIds.map(String));
+    const occupiedByTier = new Map([1, 2, 3].map((tier) => [tier, new Set(
+      sortedTierMarkers(tier)
+        .filter((marker) => !movingSet.has(marker.id))
+        .map((marker) => inferredSlot(marker).col)
+    )]));
+    return candidates.find((delta) => moving.every((marker) => {
+      const col = inferredSlot(marker).col + delta;
+      return col >= 0 && col < BOARD_GRID_COLUMNS && !occupiedByTier.get(marker.tier).has(col);
+    })) ?? null;
+  }
+
+  function moveMarkersHorizontally(markerIds, anchorId, targetCol) {
+    const moving = orderedMarkers(markerIds).filter((marker) => marker.tier != null);
+    if (moving.length !== markerIds.length || moving.length < 2) return false;
+    const anchor = moving.find((marker) => marker.id === anchorId) || moving[0];
+    const requestedDelta = Number(targetCol) - inferredSlot(anchor).col;
+    const delta = nearestValidHorizontalDelta(markerIds, requestedDelta);
+    if (delta == null) return false;
+    moving.forEach((marker) => {
+      const col = inferredSlot(marker).col + delta;
+      marker.gridCol = col;
+      marker.gridRow = 0;
+      marker.layoutOrder = col;
+      marker.x = (col + .5) / BOARD_GRID_COLUMNS;
+      marker.y = .5;
+      marker.updatedAt = new Date().toISOString();
+    });
+    return true;
+  }
+
   function placeMarkersInTier(markerIds, tier) {
     reflowTier(tier);
     const movingIds = new Set(markerIds.map(String));
@@ -567,9 +777,11 @@
     closeRelationMenu();
     const markerIds = selectedMarkerIds.has(marker.id) && selectedMarkerIds.size > 1 ? [...selectedMarkerIds] : [marker.id];
     if (!selectedMarkerIds.has(marker.id)) clearMarkerSelection();
+    const lockedTierMove = markerIds.length > 1 && markerIds.every((id) => getMarker(id)?.tier != null);
     interaction = {
       markerId: marker.id,
       markerIds,
+      lockedTierMove,
       sourceElement: event.currentTarget,
       startX: event.clientX,
       startY: event.clientY,
@@ -580,6 +792,7 @@
       pointerId: event.pointerId,
       longTimer: null,
       ghost: null,
+      ghosts: [],
       fadedElements: []
     };
     interaction.longTimer = window.setTimeout(() => {
@@ -671,6 +884,7 @@
     interaction.sourceElement?.classList.remove('relation-source');
     (interaction.fadedElements || []).forEach((element) => { element.style.opacity = ''; });
     interaction.ghost?.remove();
+    (interaction.ghosts || []).forEach((ghost) => ghost.element?.remove());
     tierZones.forEach((zone) => zone.classList.remove('drag-over'));
     boardDropHint.classList.remove('active');
     document.removeEventListener('pointermove', onGlobalPointerMove);
@@ -681,19 +895,47 @@
     const marker = getMarker(markerId);
     if (!marker || !interaction) return;
     const count = interaction.markerIds.length;
-    const ghost = document.createElement('article');
-    ghost.className = `drag-ghost ${count > 1 ? 'multi-drag-ghost' : ''}`;
-    ghost.dataset.category = marker.category;
-    ghost.innerHTML = `<span class="marker-category">${esc(marker.category)}</span><div class="marker-label">${rich(marker.label)}</div>${count > 1 ? `<b class="drag-count-badge">+${count - 1}</b>` : ''}`;
-    document.body.appendChild(ghost);
-    interaction.ghost = ghost;
     interaction.fadedElements = [...document.querySelectorAll('[data-marker-id]')].filter((element) => interaction.markerIds.includes(element.dataset.markerId));
     interaction.fadedElements.forEach((element) => { element.style.opacity = '.28'; });
+
+    if (interaction.lockedTierMove) {
+      interaction.ghosts = interaction.markerIds.map((id) => {
+        const item = getMarker(id);
+        const source = document.querySelector(`.board-marker[data-marker-id="${CSS.escape(id)}"]`);
+        if (!item || !source) return null;
+        const rect = source.getBoundingClientRect();
+        const ghost = document.createElement('article');
+        ghost.className = 'drag-ghost locked-tier-drag-ghost';
+        ghost.dataset.category = item.category;
+        ghost.innerHTML = `<span class="marker-category">${esc(item.category)}</span><div class="marker-label">${rich(item.label)}</div>`;
+        document.body.appendChild(ghost);
+        return {
+          element: ghost,
+          offsetX: rect.left + rect.width / 2 - interaction.startX,
+          fixedY: rect.top + rect.height / 2
+        };
+      }).filter(Boolean);
+    } else {
+      const ghost = document.createElement('article');
+      ghost.className = `drag-ghost ${count > 1 ? 'multi-drag-ghost' : ''}`;
+      ghost.dataset.category = marker.category;
+      ghost.innerHTML = `<span class="marker-category">${esc(marker.category)}</span><div class="marker-label">${rich(marker.label)}</div>${count > 1 ? `<b class="drag-count-badge">+${count - 1}</b>` : ''}`;
+      document.body.appendChild(ghost);
+      interaction.ghost = ghost;
+    }
     updateDragGhost(x, y);
   }
 
   function updateDragGhost(x, y) {
-    if (!interaction?.ghost) return;
+    if (!interaction) return;
+    if (interaction.lockedTierMove && interaction.ghosts?.length) {
+      interaction.ghosts.forEach((ghost) => {
+        ghost.element.style.left = `${x + ghost.offsetX}px`;
+        ghost.element.style.top = `${ghost.fixedY}px`;
+      });
+      return;
+    }
+    if (!interaction.ghost) return;
     interaction.ghost.style.left = `${x}px`;
     interaction.ghost.style.top = `${y}px`;
   }
@@ -713,8 +955,14 @@
 
   function updateDropHighlight(x, y) {
     const zone = zoneAtPoint(x, y);
-    tierZones.forEach((item) => item.classList.toggle('drag-over', item === zone));
     const boardRect = board.getBoundingClientRect();
+    const insideBoard = x >= boardRect.left && x <= boardRect.right && y >= boardRect.top && y <= boardRect.bottom;
+    if (interaction?.lockedTierMove && insideBoard) {
+      const sourceTiers = new Set(interaction.markerIds.map((id) => getMarker(id)?.tier).filter(Boolean));
+      tierZones.forEach((item) => item.classList.toggle('drag-over', sourceTiers.has(Number(item.dataset.tier))));
+    } else {
+      tierZones.forEach((item) => item.classList.toggle('drag-over', item === zone));
+    }
     boardDropHint.classList.toggle('active', y > boardRect.bottom - 5 || document.elementsFromPoint(x, y).includes(tray));
   }
 
@@ -727,12 +975,20 @@
     const boardRect = board.getBoundingClientRect();
     const overTray = document.elementsFromPoint(x, y).some((element) => element === tray || element.closest?.('#marker-tray'));
     if (zone) {
-      const tier = Number(zone.dataset.tier);
-      const slot = dropSlotForPoint(zone, x, y, movingIds);
-      const placed = placeMarkersAtSlot(movingIds, tier, slot.col);
-      showToast(placed
-        ? (movingIds.length > 1 ? `${movingIds.length}개 제약을 ${tier}점 구역의 빈 칸에 함께 배치했습니다.` : `${tier}점 구역의 빈 칸에 배치했습니다.`)
-        : `${tier}점 구역에 필요한 빈 칸이 없습니다.`);
+      if (interaction.lockedTierMove) {
+        const slot = dropSlotForPoint(zone, x, y, movingIds);
+        const moved = moveMarkersHorizontally(movingIds, interaction.markerId, slot.col);
+        showToast(moved
+          ? `${movingIds.length}개 제약의 점수 줄을 유지한 채 가로로 이동했습니다.`
+          : '선택한 제약들이 모두 들어갈 수 있는 빈 세로 열이 없습니다.');
+      } else {
+        const tier = Number(zone.dataset.tier);
+        const slot = dropSlotForPoint(zone, x, y, movingIds);
+        const placed = placeMarkersAtSlot(movingIds, tier, slot.col);
+        showToast(placed
+          ? (movingIds.length > 1 ? `${movingIds.length}개 제약을 ${tier}점 구역의 빈 칸에 함께 배치했습니다.` : `${tier}점 구역의 빈 칸에 배치했습니다.`)
+          : `${tier}점 구역에 필요한 빈 칸이 없습니다.`);
+      }
     } else if (y > boardRect.bottom - 4 || overTray) {
       unplaceMarkers(movingIds);
       showToast(movingIds.length > 1 ? `${movingIds.length}개 제약을 현황판에서 제거하고 미배치 보관함으로 옮겼습니다.` : '현황판에서 제거하고 미배치 보관함으로 옮겼습니다.');
@@ -826,7 +1082,8 @@
     } else {
       state.relations.push({ id: uid('relation'), a, b, type, createdAt: new Date().toISOString() });
     }
-    renderRelations();
+    pruneInvalidScoreSelections();
+    renderMarkers();
     scheduleSave();
     showToast(`${label} 관계를 기록했습니다.`);
   }
@@ -852,9 +1109,96 @@
     return [{ x: a.x + px, y: a.y + py }, { x: b.x + px, y: b.y + py }];
   }
 
+
+
+  function svgPath(points, attrs = '') {
+    if (!points.length) return '';
+    const commands = [`M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`];
+    points.slice(1).forEach((point) => commands.push(`L ${point.x.toFixed(2)} ${point.y.toFixed(2)}`));
+    return `<path d="${commands.join(' ')}" ${attrs}></path>`;
+  }
+
+  function orthogonalPoints(a, b) {
+    if (Math.abs(a.x - b.x) < 3 || Math.abs(a.y - b.y) < 3) return [a, b];
+    const horizontalFirst = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
+    return horizontalFirst
+      ? [a, { x: b.x, y: a.y }, b]
+      : [a, { x: a.x, y: b.y }, b];
+  }
+
+  function groupTreeEdges(group) {
+    const nodes = (group.markerIds || []).map((id) => {
+      const center = markerCenter(id);
+      const marker = getMarker(id);
+      return center && markerMatchesBoardFilter(marker) ? { id, ...center } : null;
+    }).filter(Boolean);
+    if (nodes.length < 2) return [];
+    const connected = [nodes.slice().sort((a, b) => a.x - b.x || a.y - b.y)[0]];
+    const remaining = nodes.filter((node) => node.id !== connected[0].id);
+    const edges = [];
+    while (remaining.length) {
+      let best = null;
+      connected.forEach((from) => remaining.forEach((to, index) => {
+        const distance = Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
+        if (!best || distance < best.distance) best = { from, to, index, distance };
+      }));
+      edges.push({ a: best.from, b: best.to, points: orthogonalPoints(best.from, best.to) });
+      connected.push(best.to);
+      remaining.splice(best.index, 1);
+    }
+    return edges;
+  }
+
+  function polylineSegments(points) {
+    const segments = [];
+    for (let index = 1; index < points.length; index += 1) {
+      const a = points[index - 1];
+      const b = points[index];
+      segments.push({ a, b, length: Math.hypot(b.x - a.x, b.y - a.y) });
+    }
+    return segments;
+  }
+
+  function groupMidpoint(edges) {
+    const segments = edges.flatMap((edge) => polylineSegments(edge.points));
+    const total = segments.reduce((sum, segment) => sum + segment.length, 0);
+    if (!total || !segments.length) return null;
+    let cursor = total / 2;
+    for (const segment of segments) {
+      if (cursor <= segment.length) {
+        const ratio = segment.length ? cursor / segment.length : 0;
+        return {
+          x: segment.a.x + (segment.b.x - segment.a.x) * ratio,
+          y: segment.a.y + (segment.b.y - segment.a.y) * ratio
+        };
+      }
+      cursor -= segment.length;
+    }
+    return segments.at(-1).b;
+  }
+
+  function renderGroupsSvg() {
+    let html = '';
+    (state.groups || []).forEach((group) => {
+      const edges = groupTreeEdges(group);
+      if (!edges.length) return;
+      const isGatekeeper = group.type === 'gatekeeper';
+      const stroke = isGatekeeper ? '#2fc978' : '#ffffff';
+      edges.forEach((edge) => {
+        html += svgPath(edge.points, `class="group-hit" data-group-id="${esc(group.id)}" fill="none"`);
+        html += svgPath(edge.points, `class="group-visible ${isGatekeeper ? 'gatekeeper-group-line' : 'normal-group-line'}" fill="none" stroke="${stroke}" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"`);
+      });
+      if (isGatekeeper) {
+        const midpoint = groupMidpoint(edges);
+        if (midpoint) html += `<circle class="gatekeeper-group-node" cx="${midpoint.x.toFixed(2)}" cy="${midpoint.y.toFixed(2)}" r="7" fill="#2fc978" stroke="#eafff3" stroke-width="2"></circle>`;
+      }
+    });
+    return html;
+  }
+
   function renderRelations() {
     const visible = state.relations.filter((relation) => state.relationVisibility?.[relation.type] !== false && markerMatchesBoardFilter(getMarker(relation.a)) && markerMatchesBoardFilter(getMarker(relation.b)));
-    let html = '';
+    let html = renderGroupsSvg();
     visible.forEach((relation) => {
       const a = markerCenter(relation.a);
       const b = markerCenter(relation.b);
@@ -889,12 +1233,18 @@
       event.stopPropagation();
       openRelationMenu(line.dataset.relationId, event.clientX, event.clientY);
     }));
+    relationLayer.querySelectorAll('[data-group-id]').forEach((line) => line.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openGroupMenu(line.dataset.groupId, event.clientX, event.clientY);
+    }));
   }
 
   function openRelationMenu(id, x, y) {
     const relation = state.relations.find((item) => item.id === id);
     if (!relation) return;
     activeRelationId = id;
+    activeGroupId = null;
+    document.getElementById('remove-relation-button').textContent = '관계 해제';
     const a = getMarker(relation.a);
     const b = getMarker(relation.b);
     const type = relation.type === 'conflict' ? '충돌 관계' : '시너지 관계';
@@ -904,24 +1254,52 @@
     relationMenu.style.top = `${clamp(y + 8, 10, window.innerHeight - 90)}px`;
   }
 
+  function openGroupMenu(id, x, y) {
+    const group = (state.groups || []).find((item) => item.id === id);
+    if (!group) return;
+    activeRelationId = null;
+    activeGroupId = id;
+    const type = group.type === 'gatekeeper' ? '문지기 묶음' : '일반 묶음';
+    const labels = group.markerIds.map(getMarker).filter(Boolean).map((marker) => marker.label).join(' · ');
+    document.getElementById('relation-menu-title').textContent = `${type}: ${labels}`;
+    document.getElementById('remove-relation-button').textContent = '묶음 해제';
+    relationMenu.hidden = false;
+    relationMenu.style.left = `${clamp(x + 8, 10, window.innerWidth - 220)}px`;
+    relationMenu.style.top = `${clamp(y + 8, 10, window.innerHeight - 90)}px`;
+  }
+
   function closeRelationMenu() {
     relationMenu.hidden = true;
     activeRelationId = null;
+    activeGroupId = null;
+    document.getElementById('remove-relation-button').textContent = '관계 해제';
   }
 
   document.getElementById('remove-relation-button').addEventListener('click', () => {
+    if (activeGroupId) {
+      const group = (state.groups || []).find((item) => item.id === activeGroupId);
+      const label = group?.type === 'gatekeeper' ? '문지기 묶음' : '일반 묶음';
+      state.groups = (state.groups || []).filter((item) => item.id !== activeGroupId);
+      pruneInvalidScoreSelections();
+      closeRelationMenu();
+      renderMarkers();
+      scheduleSave();
+      showToast(`${label}을 해제했습니다.`);
+      return;
+    }
     if (!activeRelationId) return;
     const relation = state.relations.find((item) => item.id === activeRelationId);
     const label = relation?.type === 'synergy' ? '시너지' : '충돌';
     state.relations = state.relations.filter((item) => item.id !== activeRelationId);
+    pruneInvalidScoreSelections();
     closeRelationMenu();
-    renderRelations();
+    renderMarkers();
     scheduleSave();
     showToast(`${label} 관계를 해제했습니다.`);
   });
 
   document.addEventListener('click', (event) => {
-    if (!event.target.closest('#relation-menu') && !event.target.closest('.relation-hit')) closeRelationMenu();
+    if (!event.target.closest('#relation-menu') && !event.target.closest('.relation-hit') && !event.target.closest('.group-hit')) closeRelationMenu();
   });
 
   function openModal(id) {
@@ -940,6 +1318,18 @@
   document.querySelectorAll('[data-close-modal]').forEach((button) => button.addEventListener('click', closeModals));
   backdrop.addEventListener('click', closeModals);
   document.addEventListener('keydown', (event) => {
+    const target = event.target;
+    const editing = target?.matches?.('input,textarea,select,[contenteditable="true"]');
+    if (!editing && selectedMarkerIds.size >= 2 && event.key === 'Enter') {
+      event.preventDefault();
+      createMarkerGroup('normal');
+      return;
+    }
+    if (!editing && selectedMarkerIds.size >= 2 && event.key === 'ArrowUp') {
+      event.preventDefault();
+      createMarkerGroup('gatekeeper');
+      return;
+    }
     if (event.key === 'Escape') {
       if (aim) cancelAim();
       closeRelationMenu();
@@ -999,15 +1389,16 @@
     const id = document.getElementById('edit-marker-id').value;
     const marker = getMarker(id);
     if (!marker) return;
-    if (!window.confirm(`“${marker.title}” 제약을 완전히 삭제할까요? 연결된 충돌·시너지 관계도 함께 삭제됩니다.`)) return;
+    if (!window.confirm(`“${marker.title}” 제약을 완전히 삭제할까요? 연결된 충돌·시너지 관계와 묶음 정보도 함께 삭제됩니다.`)) return;
     state.markers = state.markers.filter((item) => item.id !== id);
     selectedMarkerIds.delete(id);
     scoreSelectedMarkerIds.delete(id);
     state.relations = state.relations.filter((relation) => relation.a !== id && relation.b !== id);
+    state.groups = (state.groups || []).map((group) => ({ ...group, markerIds: group.markerIds.filter((markerId) => markerId !== id) })).filter((group) => group.markerIds.length >= 2);
     closeModals();
     renderMarkers();
     scheduleSave();
-    showToast('제약 마크와 연결 관계를 완전히 삭제했습니다.');
+    showToast('제약 마크와 연결 관계·묶음 정보를 완전히 삭제했습니다.');
   });
 
   function sourceTexts(analysis) {
@@ -1231,7 +1622,9 @@
   function relationCounts(snapshot) {
     return {
       conflict: snapshot.relations.filter((relation) => relation.type === 'conflict').length,
-      synergy: snapshot.relations.filter((relation) => relation.type === 'synergy').length
+      synergy: snapshot.relations.filter((relation) => relation.type === 'synergy').length,
+      normalGroup: (snapshot.groups || []).filter((group) => group.type === 'normal').length,
+      gatekeeperGroup: (snapshot.groups || []).filter((group) => group.type === 'gatekeeper').length
     };
   }
 
@@ -1243,7 +1636,7 @@
       return `<article class="version-card ${compareSelection.includes(version.id) ? 'compare-selected' : ''}" data-version-id="${esc(version.id)}">
         <header><h3>${esc(version.name)}</h3><time datetime="${esc(version.createdAt)}">${formatDate(version.createdAt)}</time></header>
         <p>${esc(version.memo || '변경 메모 없음')}</p>
-        <div class="version-summary"><span>제약 ${version.snapshot.markers.length}개</span><span>배치 ${version.snapshot.markers.filter((marker) => marker.tier != null).length}개</span><span>충돌 ${counts.conflict}</span><span>시너지 ${counts.synergy}</span></div>
+        <div class="version-summary"><span>제약 ${version.snapshot.markers.length}개</span><span>배치 ${version.snapshot.markers.filter((marker) => marker.tier != null).length}개</span><span>충돌 ${counts.conflict}</span><span>시너지 ${counts.synergy}</span><span>묶음 ${counts.normalGroup}</span><span>문지기 ${counts.gatekeeperGroup}</span></div>
         <div class="version-actions">
           <button type="button" data-preview-version="${esc(version.id)}">미리보기</button>
           <button type="button" data-load-version="${esc(version.id)}">현재 작업판으로 불러오기</button>
@@ -1274,7 +1667,7 @@
     if (!version) return;
     const counts = relationCounts(version.snapshot);
     document.getElementById('preview-title').textContent = version.name;
-    document.getElementById('preview-content').innerHTML = `<div class="preview-meta"><span>${formatDate(version.createdAt)}</span><span>제약 ${version.snapshot.markers.length}개</span><span>충돌 ${counts.conflict}</span><span>시너지 ${counts.synergy}</span></div><p class="preview-memo">${esc(version.memo || '변경 메모 없음')}</p>${miniBoard(version.snapshot)}`;
+    document.getElementById('preview-content').innerHTML = `<div class="preview-meta"><span>${formatDate(version.createdAt)}</span><span>제약 ${version.snapshot.markers.length}개</span><span>충돌 ${counts.conflict}</span><span>시너지 ${counts.synergy}</span><span>묶음 ${counts.normalGroup}</span><span>문지기 ${counts.gatekeeperGroup}</span></div><p class="preview-memo">${esc(version.memo || '변경 메모 없음')}</p>${miniBoard(version.snapshot)}`;
     openModal('preview-modal');
   }
 
@@ -1338,6 +1731,10 @@
     return `${[relation.a, relation.b].sort().join('|')}|${relation.type}`;
   }
 
+  function groupKey(group) {
+    return `${groupSignature(group.markerIds)}|group:${group.type}`;
+  }
+
   function compareVersions(firstId, secondId) {
     const first = versions.find((item) => item.id === firstId);
     const second = versions.find((item) => item.id === secondId);
@@ -1370,6 +1767,17 @@
     };
     const relationAdded = [...afterRelations].filter((key) => !beforeRelations.has(key)).map((key) => relationLabel(key, after));
     const relationRemoved = [...beforeRelations].filter((key) => !afterRelations.has(key)).map((key) => relationLabel(key, before));
+    const beforeGroups = new Set((before.groups || []).map(groupKey));
+    const afterGroups = new Set((after.groups || []).map(groupKey));
+    const groupLabel = (key, snapshot) => {
+      const splitAt = key.lastIndexOf('|group:');
+      const ids = key.slice(0, splitAt).split('|');
+      const type = key.slice(splitAt + 7);
+      const labels = ids.map((id) => snapshot.markers.find((marker) => marker.id === id)?.title || '삭제된 제약').join(' · ');
+      return `${labels} (${type === 'gatekeeper' ? '문지기 묶음' : '일반 묶음'})`;
+    };
+    relationAdded.push(...[...afterGroups].filter((key) => !beforeGroups.has(key)).map((key) => groupLabel(key, after)));
+    relationRemoved.push(...[...beforeGroups].filter((key) => !afterGroups.has(key)).map((key) => groupLabel(key, before)));
 
     const group = (title, items) => `<section class="compare-group ${items.length ? '' : 'empty'}"><h3>${esc(title)} · ${items.length}</h3><ul>${items.length ? items.map((item) => `<li>${esc(item)}</li>`).join('') : '<li>변경 없음</li>'}</ul></section>`;
     document.getElementById('compare-content').innerHTML = `<div class="compare-head"><div class="compare-version"><small>기준 버전</small><strong>${esc(first.name)}</strong></div><div class="compare-arrow">→</div><div class="compare-version"><small>비교 버전</small><strong>${esc(second.name)}</strong></div></div><div class="compare-groups">${group('추가된 제약', added)}${group('제거된 제약', removed)}${group('변경된 제약', changed)}${group('추가된 관계', relationAdded)}${group('해제된 관계', relationRemoved)}</div>`;
