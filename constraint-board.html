@@ -6,7 +6,7 @@
   <meta name="description" content="제약 마크를 1·2·3점 현황판에 배치하고 충돌·시너지 관계와 버전별 설계 기록을 관리하는 Endfield Balance Lab 제약 설계 페이지">
   <title>제약 설계 | Endfield Balance Lab</title>
   <link rel="stylesheet" href="styles.css?v=68">
-  <link rel="stylesheet" href="constraint-board.css?v=68">
+  <link rel="stylesheet" href="constraint-board.css?v=70">
 </head>
 <body>
   <header class="app-topbar">
@@ -44,7 +44,7 @@
 
     <section class="board-card" aria-labelledby="board-title">
       <div class="board-card-heading">
-        <div class="board-title-block"><small>MAGNETIC CONSTRAINT BOARD</small><div class="board-title-line"><h2 id="board-title">1·2·3점 현황판</h2><div id="score-selection-total" class="score-selection-total" title="현황판의 제약 마크를 더블클릭하면 선택 총점에 포함됩니다."><span>더블클릭 선택 총점</span><strong id="score-selection-value">0점</strong></div></div></div>
+        <div class="board-title-block"><small>MAGNETIC CONSTRAINT BOARD</small><div class="board-title-line"><h2 id="board-title">1·2·3점 현황판</h2><div id="score-selection-total" class="score-selection-total" title="현황판의 제약 마크를 더블클릭하면 선택 제약 총점에 포함됩니다."><span>선택 제약 총점</span><strong id="score-selection-value">0점</strong></div></div></div>
         <div class="board-heading-tools">
           <button id="open-placement-modal" class="board-place-button" type="button" aria-controls="placement-drawer" aria-expanded="false">미배치 제약 열기</button>
           <div class="relation-visibility" aria-label="관계선 표시 설정">
@@ -54,7 +54,7 @@
         </div>
       </div>
       <div class="board-instruction">
-        <span>드래그: 배치·이동</span><span>더블클릭: 총점 선택</span><span>SHIFT+클릭: 여러 마크 선택</span><span>선택 마크 드래그: 함께 이동</span><span>아래로 끌기: 현황판에서 제거</span><span>길게 누르기: 충돌 연결</span><span>빠르게 세 번 누르기: 시너지 연결</span><button id="clear-marker-selection" class="selection-clear-button" type="button" hidden>선택 해제</button><strong id="marker-selection-status" class="marker-selection-status" aria-live="polite">선택 없음</strong>
+        <span>드래그: 배치·이동</span><span>빠르게 두 번 누르기: 총점 포함/제외</span><span>SHIFT+클릭: 여러 마크 선택</span><span>선택 마크 드래그: 함께 이동</span><span>아래로 끌기: 현황판에서 제거</span><span>길게 누르기: 충돌 연결</span><span>빠르게 세 번 누르기: 시너지 연결</span><button id="clear-marker-selection" class="selection-clear-button" type="button" hidden>선택 해제</button><strong id="marker-selection-status" class="marker-selection-status" aria-live="polite">선택 없음</strong>
       </div>
       <div id="constraint-board-scroll" class="constraint-board-scroll">
         <div id="constraint-board" class="constraint-board" aria-label="제약 마크 배치 현황판">
@@ -149,6 +149,6 @@
   <script src="saved-analyses.js?v=64"></script>
   <script src="analysis-store.js?v=63"></script>
   <script src="constraint-data.js?v=59"></script>
-  <script src="constraint-board.js?v=68"></script>
+  <script src="constraint-board.js?v=70"></script>
 </body>
 </html>

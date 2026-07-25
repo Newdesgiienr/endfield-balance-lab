@@ -147,12 +147,12 @@
 .compact-marker-form .create-marker-button { width:100%; margin-top:auto; justify-self:stretch; }
 .marker-tray-panel .work-panel-heading { min-height:104px; }
 .marker-tray-categories { display:grid; grid-template-columns:repeat(4,minmax(220px,1fr)); gap:12px; min-height:330px; padding:15px 17px 20px; overflow-x:auto; background:#fbfcfd; }
-.tray-category { --category-color:#8b97a2; min-width:220px; border:1px solid color-mix(in srgb,var(--category-color) 24%,#dce3e9 76%); border-radius:15px; background:#fff; overflow:visible; }
+.tray-category { --category-color:#8b97a2; min-width:220px; box-sizing:border-box; border:2px solid var(--category-color); border-radius:15px; background:#fff; overflow:hidden; box-shadow:0 0 0 1px color-mix(in srgb,var(--category-color) 12%,transparent); }
 .tray-category[data-category="팀"] { --category-color:var(--cat-team); }
 .tray-category[data-category="조작"] { --category-color:var(--cat-control); }
 .tray-category[data-category="환경"] { --category-color:var(--cat-env); }
 .tray-category[data-category="적"] { --category-color:var(--cat-enemy); }
-.tray-category > header { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 13px 11px; border-bottom:3px solid var(--category-color); background:color-mix(in srgb,var(--category-color) 7%,white 93%); }
+.tray-category > header { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 13px 11px; border-bottom:2px solid var(--category-color); background:color-mix(in srgb,var(--category-color) 7%,white 93%); }
 .tray-category > header div { display:flex; align-items:baseline; gap:7px; }
 .tray-category > header span { color:#293641; font-size:14px; font-weight:950; }
 .tray-category > header small { color:var(--category-color); font-size:8px; font-weight:950; letter-spacing:.11em; }
@@ -174,12 +174,12 @@
 .placement-modal-body { padding:18px 20px 22px; }
 .placement-modal-body > p { margin:0 0 15px; padding:11px 13px; border-radius:11px; background:#f4f7f9; color:#64727e; font-size:12px; line-height:1.65; }
 .placement-marker-list { display:grid; grid-template-columns:repeat(4,minmax(220px,1fr)); gap:12px; overflow-x:auto; }
-.placement-category { --category-color:#8b97a2; min-width:220px; border:1px solid #dde4ea; border-radius:14px; overflow:hidden; background:#fbfcfd; }
+.placement-category { --category-color:#8b97a2; min-width:220px; box-sizing:border-box; border:2px solid var(--category-color); border-radius:14px; overflow:hidden; background:#fbfcfd; box-shadow:0 0 0 1px color-mix(in srgb,var(--category-color) 10%,transparent); }
 .placement-category[data-category="팀"] { --category-color:var(--cat-team); }
 .placement-category[data-category="조작"] { --category-color:var(--cat-control); }
 .placement-category[data-category="환경"] { --category-color:var(--cat-env); }
 .placement-category[data-category="적"] { --category-color:var(--cat-enemy); }
-.placement-category > header { display:flex; align-items:center; justify-content:space-between; padding:11px 12px; border-bottom:3px solid var(--category-color); background:#fff; }
+.placement-category > header { display:flex; align-items:center; justify-content:space-between; padding:11px 12px; border-bottom:2px solid var(--category-color); background:#fff; }
 .placement-category > header strong { color:#26333f; font-size:14px; }
 .placement-category > header span { color:var(--category-color); font-size:10px; font-weight:950; }
 .placement-category-list { display:flex; flex-direction:column; gap:9px; min-height:300px; max-height:56vh; overflow:auto; padding:10px; }
@@ -456,3 +456,7 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
   .board-title-line { align-items:flex-start; flex-direction:column; gap:9px; }
   .score-selection-total { font-size:11.5px; }
 }
+
+/* v69: continuous rounded category outlines and clearer score label */
+
+/* v70: V68 incremental patch — continuous category outlines and updated interaction guide */

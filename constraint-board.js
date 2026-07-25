@@ -309,7 +309,7 @@
     if (scoreSelectionValue) scoreSelectionValue.textContent = `${total}점`;
     if (scoreSelectionTotal) {
       scoreSelectionTotal.classList.toggle('active', selected.length > 0);
-      scoreSelectionTotal.setAttribute('aria-label', selected.length ? `더블클릭으로 선택한 제약 ${selected.length}개, 총 ${total}점` : '더블클릭으로 선택한 제약 없음, 총 0점');
+      scoreSelectionTotal.setAttribute('aria-label', selected.length ? `선택한 제약 ${selected.length}개, 총 ${total}점` : '선택한 제약 없음, 총 0점');
     }
   }
 
