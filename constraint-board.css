@@ -1203,3 +1203,19 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
       0 9px 20px rgba(0,0,0,.3);
   }
 }
+
+
+/* v88: keep the conflict veil inside the marker body and dim badge pills separately. */
+.board-marker.is-score-blocked:not(.is-score-selected)::before {
+  inset: 0;
+  border-radius: inherit;
+}
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row {
+  filter: none;
+  opacity: 1;
+}
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-category,
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-phase-badge {
+  filter: grayscale(1) saturate(0) brightness(.68);
+  opacity: .7;
+}
