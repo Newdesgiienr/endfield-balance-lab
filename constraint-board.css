@@ -1482,3 +1482,37 @@ body.placement-drawer-dragging {
 
 
 /* v104: relationship endpoints and masks include each visible phase/category badge. */
+
+
+/* v105: show score beside phase/category in the all-constraint storage view. */
+.marker-score-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 54px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: #202b35;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(0,0,0,.25);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .045em;
+  text-align: center;
+  white-space: nowrap;
+}
+/* In storage cards, 2차 / 점수 / 카테고리 use one identical pill size. */
+.tray-category-grid .tray-marker .marker-badge-row .marker-phase-badge,
+.tray-category-grid .tray-marker .marker-badge-row .marker-score-badge,
+.tray-category-grid .tray-marker .marker-badge-row .marker-category {
+  box-sizing: border-box;
+  width: 54px;
+  min-width: 54px;
+  height: 28px;
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: .045em;
+}
+.tray-category-grid .tray-marker .marker-badge-row {
+  gap: 5px;
+}

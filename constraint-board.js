@@ -228,8 +228,10 @@
     toastTimer = window.setTimeout(() => { toast.hidden = true; }, 2600);
   }
 
-  function markerBadgeHtml(marker) {
-    return `<div class="marker-badge-row">${marker.isSecondPhase ? '<span class="marker-phase-badge">2차</span>' : ''}<span class="marker-category">${esc(marker.category)}</span></div>`;
+  function markerBadgeHtml(marker, options = {}) {
+    const phaseBadge = marker.isSecondPhase ? '<span class="marker-phase-badge">2차</span>' : '';
+    const scoreBadge = options.includeScore && marker.tier != null ? `<span class="marker-score-badge">${marker.tier}점</span>` : '';
+    return `<div class="marker-badge-row">${phaseBadge}${scoreBadge}<span class="marker-category">${esc(marker.category)}</span></div>`;
   }
 
   function markerHtml(marker, location) {
@@ -244,11 +246,10 @@
     const scoreSelectedClass = isBoard && scoreSelectedMarkerIds.has(marker.id) ? ' is-score-selected' : '';
     const secondPhaseClass = marker.isSecondPhase ? ' is-second-phase' : '';
     const excludedClass = marker.isSecondPhase && state.secondPhaseIncluded === false ? ' is-second-phase-excluded' : '';
-    const placementBadge = !isBoard && marker.tier != null ? `<span class="marker-placement-badge">${marker.tier}점</span>` : '';
+    const showScoreInBadgeRow = location === 'tray' && state.trayViewAll && marker.tier != null;
     const conflictOverlay = isBoard ? '<div class="score-conflict-overlay" aria-hidden="true"><span>충돌</span><b>⊘</b></div>' : '';
     return `<article class="${className}${selectedClass}${scoreSelectedClass}${secondPhaseClass}${excludedClass}" data-marker-id="${esc(marker.id)}" data-marker-location="${esc(location)}" data-category="${esc(marker.category)}" data-second-phase="${marker.isSecondPhase}" style="${style}" tabindex="0" aria-selected="${selectedMarkerIds.has(marker.id)}" data-score-selected="${isBoard && scoreSelectedMarkerIds.has(marker.id)}" aria-label="${marker.isSecondPhase ? '2차 ' : ''}${esc(marker.category)} 제약 ${esc(marker.title)}">
-      ${markerBadgeHtml(marker)}
-      ${placementBadge}
+      ${markerBadgeHtml(marker, { includeScore: showScoreInBadgeRow })}
       <button type="button" class="marker-edit-trigger" data-edit-marker="${esc(marker.id)}" aria-label="${esc(marker.title)} 수정">✎</button>
       <div class="marker-label">${rich(marker.label)}</div>
       ${conflictOverlay}
