@@ -1219,3 +1219,11 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
   filter: grayscale(1) saturate(0) brightness(.68);
   opacity: .7;
 }
+
+/* v89: prevent the body's dashed conflict border from showing through badge pills. */
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-category,
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-phase-badge {
+  opacity: 1;
+  filter: grayscale(1) saturate(0) brightness(.68);
+  background-clip: padding-box;
+}
