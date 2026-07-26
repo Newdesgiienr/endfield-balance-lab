@@ -1033,3 +1033,103 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
   .marker-badge-row .marker-category,
   .marker-phase-badge { font-size: 11px; }
 }
+
+/* v84: single-click score selection, dashboard-style selection flash, and explicit conflict overlay */
+.board-marker.score-select-flash {
+  z-index: 9;
+  animation: boardMarkerScoreSelectPulse .42s ease-out;
+}
+@keyframes boardMarkerScoreSelectPulse {
+  0% {
+    filter: brightness(1);
+    box-shadow:
+      inset 0 0 0 3px #67d7ff,
+      0 0 0 0 rgba(255,255,255,0),
+      0 0 0 rgba(255,0,0,0),
+      0 9px 20px rgba(0,0,0,.3);
+  }
+  45% {
+    filter: brightness(1.62);
+    box-shadow:
+      inset 0 0 0 3px #8ce4ff,
+      0 0 0 4px rgba(255,255,255,1),
+      0 0 30px rgba(255,28,42,1),
+      0 0 66px rgba(255,0,20,.9),
+      0 0 104px rgba(255,40,40,.44);
+  }
+  100% {
+    filter: brightness(1);
+    box-shadow:
+      inset 0 0 0 3px #67d7ff,
+      0 0 0 2px rgba(255,255,255,.72),
+      0 0 16px rgba(255,22,38,.82),
+      0 0 32px rgba(255,0,24,.46),
+      0 9px 20px rgba(0,0,0,.3);
+  }
+}
+
+/* Do not dim the whole element: that would also fade the warning text and symbol. */
+.board-marker.is-score-blocked:not(.is-score-selected) {
+  opacity: 1;
+  filter: none;
+}
+.board-marker.is-score-blocked:not(.is-score-selected)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border: 1px dashed rgba(255,255,255,.34);
+  border-radius: inherit;
+  background: rgba(8,11,15,.61);
+  backdrop-filter: grayscale(1) brightness(.58);
+  pointer-events: none;
+}
+.board-marker.is-score-blocked.is-board-filter-dimmed:not(.is-score-selected) {
+  opacity: 1;
+  filter: none;
+}
+.board-marker.is-score-blocked.is-board-filter-dimmed:not(.is-score-selected)::before {
+  background: rgba(8,11,15,.73);
+  backdrop-filter: grayscale(1) brightness(.48);
+}
+
+.score-conflict-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: inherit;
+  pointer-events: none;
+  text-align: center;
+  text-shadow: 0 2px 7px rgba(0,0,0,.8);
+}
+.board-marker.is-conflict-blocked:not(.is-score-selected) .score-conflict-overlay {
+  display: flex;
+}
+.score-conflict-overlay span {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: .08em;
+  line-height: 1;
+}
+.score-conflict-overlay b {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: #ff3545;
+  font-family: Arial, sans-serif;
+  font-size: 31px;
+  font-weight: 950;
+  line-height: 1;
+  filter: drop-shadow(0 0 5px rgba(255,38,57,.48));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-marker.score-select-flash { animation-duration: .01ms; }
+}

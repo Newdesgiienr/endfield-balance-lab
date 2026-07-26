@@ -48,6 +48,7 @@
   const scoreSelectedMarkerIds = new Set();
   let pendingScoreSelectionTimer = null;
   let pendingScoreSelectionId = null;
+  let suppressScoreClickUntil = 0;
   let boardCategoryFilter = 'all';
   let boardScoreFilter = 'all';
 
@@ -221,11 +222,13 @@
     const secondPhaseClass = marker.isSecondPhase ? ' is-second-phase' : '';
     const excludedClass = marker.isSecondPhase && state.secondPhaseIncluded === false ? ' is-second-phase-excluded' : '';
     const placementBadge = !isBoard && marker.tier != null ? `<span class="marker-placement-badge">${marker.tier}점</span>` : '';
+    const conflictOverlay = isBoard ? '<div class="score-conflict-overlay" aria-hidden="true"><span>충돌</span><b>⊘</b></div>' : '';
     return `<article class="${className}${selectedClass}${scoreSelectedClass}${secondPhaseClass}${excludedClass}" data-marker-id="${esc(marker.id)}" data-marker-location="${esc(location)}" data-category="${esc(marker.category)}" data-second-phase="${marker.isSecondPhase}" style="${style}" tabindex="0" aria-selected="${selectedMarkerIds.has(marker.id)}" data-score-selected="${isBoard && scoreSelectedMarkerIds.has(marker.id)}" aria-label="${marker.isSecondPhase ? '2차 ' : ''}${esc(marker.category)} 제약 ${esc(marker.title)}">
       ${markerBadgeHtml(marker)}
       ${placementBadge}
       <button type="button" class="marker-edit-trigger" data-edit-marker="${esc(marker.id)}" aria-label="${esc(marker.title)} 수정">✎</button>
       <div class="marker-label">${rich(marker.label)}</div>
+      ${conflictOverlay}
     </article>`;
   }
 
@@ -358,7 +361,6 @@
     document.querySelectorAll('[data-marker-id]').forEach((element) => {
       element.addEventListener('pointerdown', onMarkerPointerDown);
       element.addEventListener('click', onMarkerClick);
-      element.addEventListener('dblclick', onMarkerDoubleClick);
       element.addEventListener('pointerenter', showMarkerTooltip);
       element.addEventListener('pointermove', moveTooltip);
       element.addEventListener('pointerleave', hideTooltip);
@@ -583,9 +585,11 @@
     document.querySelectorAll('.board-marker[data-marker-id]').forEach((element) => {
       const marker = getMarker(element.dataset.markerId);
       const selected = scoreSelectedMarkerIds.has(element.dataset.markerId);
+      const conflict = marker && !selected ? conflictingSelectedMarker(marker.id) : null;
       const reason = marker && !selected ? scoreBlockReason(marker) : '';
       element.classList.toggle('is-score-selected', selected);
       element.classList.toggle('is-score-blocked', Boolean(reason));
+      element.classList.toggle('is-conflict-blocked', Boolean(conflict));
       element.dataset.scoreSelected = String(selected);
       element.dataset.scoreBlockedReason = reason;
       element.setAttribute('aria-disabled', String(Boolean(reason)));
@@ -597,6 +601,15 @@
       scoreSelectionTotal.classList.toggle('active', selected.length > 0);
       scoreSelectionTotal.setAttribute('aria-label', selected.length ? `선택한 제약 ${selected.length}개, 총 ${total}점` : '선택한 제약 없음, 총 0점');
     }
+  }
+
+  function playScoreSelectionEffect(id) {
+    const element = document.querySelector(`.board-marker[data-marker-id="${CSS.escape(String(id))}"]`);
+    if (!element) return;
+    element.classList.remove('score-select-flash');
+    void element.offsetWidth;
+    element.classList.add('score-select-flash');
+    window.setTimeout(() => element.classList.remove('score-select-flash'), 480);
   }
 
   function toggleScoreSelection(id) {
@@ -620,6 +633,7 @@
     scoreSelectedMarkerIds.add(marker.id);
     pruneInvalidScoreSelections();
     updateScoreSelectionUi();
+    playScoreSelectionEffect(marker.id);
   }
 
   function orderedMarkers(ids) {
@@ -851,12 +865,16 @@
     const marker = getMarker(event.currentTarget.dataset.markerId);
     if (!marker) return;
     if (event.shiftKey) {
+      suppressScoreClickUntil = performance.now() + 420;
+      cancelPendingScoreSelection();
       event.preventDefault();
       event.stopPropagation();
       toggleMarkerSelection(marker.id);
       return;
     }
     if (aim?.type === 'synergy') {
+      suppressScoreClickUntil = performance.now() + 520;
+      cancelPendingScoreSelection();
       event.preventDefault();
       completeAimAt(marker.id);
       return;
@@ -895,6 +913,8 @@
         cleanupInteraction();
         return;
       }
+      suppressScoreClickUntil = performance.now() + 700;
+      cancelPendingScoreSelection();
       interaction.mode = 'conflict';
       beginAim('conflict', marker.id, event.clientX, event.clientY, true);
       event.currentTarget.classList.add('relation-source');
@@ -906,23 +926,27 @@
 
   function onMarkerClick(event) {
     if (event.shiftKey || event.target.closest('button')) return;
-    const marker = getMarker(event.currentTarget.dataset.markerId);
-    if (!marker || marker.tier == null) return;
-    if (event.detail >= 3) {
-      event.preventDefault();
-      cancelPendingScoreSelection();
-      beginAim('synergy', marker.id, event.clientX, event.clientY, false);
-      showToast('시너지 연결 모드: 연결할 다른 제약 마크를 클릭하세요.');
-    }
-  }
-
-  function onMarkerDoubleClick(event) {
-    if (event.shiftKey || event.target.closest('button')) return;
     const element = event.currentTarget;
     if (element.dataset.markerLocation !== 'board') return;
     const marker = getMarker(element.dataset.markerId);
     if (!marker || marker.tier == null) return;
-    event.preventDefault();
+    if (performance.now() < suppressScoreClickUntil) {
+      event.preventDefault();
+      cancelPendingScoreSelection();
+      return;
+    }
+
+    if (event.detail >= 3) {
+      event.preventDefault();
+      cancelPendingScoreSelection();
+      suppressScoreClickUntil = performance.now() + 420;
+      beginAim('synergy', marker.id, event.clientX, event.clientY, false);
+      showToast('시너지 연결 모드: 연결할 다른 제약 마크를 클릭하세요.');
+      return;
+    }
+
+    // Delay the normal click just enough to preserve the existing rapid triple-click synergy gesture.
+    // A double click is treated as one normal score toggle; a third click cancels it and starts synergy.
     cancelPendingScoreSelection();
     pendingScoreSelectionId = marker.id;
     pendingScoreSelectionTimer = window.setTimeout(() => {
@@ -940,6 +964,8 @@
     const distance = Math.hypot(event.clientX - interaction.startX, event.clientY - interaction.startY);
     if (interaction.mode === 'pending' && distance > 7) {
       interaction.moved = true;
+      suppressScoreClickUntil = performance.now() + 520;
+      cancelPendingScoreSelection();
       window.clearTimeout(interaction.longTimer);
       interaction.mode = 'drag';
       startDragGhost(interaction.markerId, event.clientX, event.clientY);
@@ -956,8 +982,12 @@
   function onGlobalPointerUp(event) {
     if (!interaction) return;
     window.clearTimeout(interaction.longTimer);
-    if (interaction.mode === 'drag') finishDrag(event.clientX, event.clientY);
+    if (interaction.mode === 'drag') {
+      suppressScoreClickUntil = performance.now() + 520;
+      finishDrag(event.clientX, event.clientY);
+    }
     if (interaction.mode === 'conflict') {
+      suppressScoreClickUntil = performance.now() + 620;
       const target = markerAtPoint(event.clientX, event.clientY);
       if (target && target !== interaction.markerId) createRelation(interaction.markerId, target, 'conflict');
       else showToast('충돌 연결이 취소되었습니다.');
