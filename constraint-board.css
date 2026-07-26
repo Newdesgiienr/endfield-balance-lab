@@ -1227,3 +1227,28 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
   filter: grayscale(1) saturate(0) brightness(.68);
   background-clip: padding-box;
 }
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row {
+  z-index: 7;
+}
+
+
+/* v90: suppress dashed conflict border only behind individual badge pills while keeping the gap between them visible. */
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-category,
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-phase-badge {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-category::before,
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-phase-badge::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  top: -6px;
+  bottom: -4px;
+  z-index: -1;
+  border-radius: 999px;
+  background: rgba(8,11,15,.92);
+  pointer-events: none;
+}
