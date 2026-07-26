@@ -7,7 +7,10 @@
   const CURRENT_KEY = 'endfield.constraintBoard.current.v1';
   const VERSION_KEY = 'endfield.constraintBoard.versions.v1';
   const CATEGORY_CLASS = { 팀: 'team', 조작: 'control', 환경: 'env' };
-  const BOARD_GRID_COLUMNS = 8;
+  const MIN_BOARD_GRID_COLUMNS = 8;
+  const MAX_BOARD_GRID_COLUMNS = 48;
+  const BOARD_TRAILING_COLUMNS = 2;
+  const BOARD_LABEL_WIDTH = 95;
   const analyses = STORE.getAll();
 
   const board = document.getElementById('constraint-board');
@@ -93,6 +96,7 @@
       relationVisibility: { conflict: true, synergy: true },
       secondPhaseIncluded: true,
       trayViewAll: false,
+      boardColumns: MIN_BOARD_GRID_COLUMNS,
       updatedAt: new Date().toISOString()
     };
   }
@@ -110,7 +114,7 @@
       tier: [1, 2, 3].includes(Number(item.tier)) ? Number(item.tier) : null,
       x: clamp(Number(item.x) || .5, .04, .96),
       y: clamp(Number(item.y) || .5, .08, .92),
-      gridCol: Number.isFinite(Number(item.gridCol)) ? clamp(Math.round(Number(item.gridCol)), 0, BOARD_GRID_COLUMNS - 1) : null,
+      gridCol: Number.isFinite(Number(item.gridCol)) ? clamp(Math.round(Number(item.gridCol)), 0, MAX_BOARD_GRID_COLUMNS - 1) : null,
       gridRow: [1, 2, 3].includes(Number(item.tier)) ? 0 : null,
       layoutOrder: Number.isFinite(Number(item.layoutOrder)) ? Number(item.layoutOrder) : index,
       sourceConstraintId: item.sourceConstraintId ? String(item.sourceConstraintId) : null,
@@ -130,6 +134,15 @@
       markerIds: [...new Set((Array.isArray(item?.markerIds) ? item.markerIds : []).map(String).filter((id) => ids.has(id)))],
       createdAt: item?.createdAt || new Date().toISOString()
     })).filter((item) => item.markerIds.length >= 2) : [];
+    const highestStoredColumn = markers.reduce((highest, marker) => {
+      if (marker.tier == null || !Number.isFinite(Number(marker.gridCol))) return highest;
+      return Math.max(highest, Math.round(Number(marker.gridCol)));
+    }, -1);
+    const requiredColumns = Math.max(
+      MIN_BOARD_GRID_COLUMNS,
+      highestStoredColumn + 1 + BOARD_TRAILING_COLUMNS,
+      ...[1, 2, 3].map((tier) => markers.filter((marker) => marker.tier === tier).length + BOARD_TRAILING_COLUMNS)
+    );
     return {
       schemaVersion: 1,
       projectId: String(source.projectId || uid('constraint-project')),
@@ -142,6 +155,7 @@
       },
       secondPhaseIncluded: source.secondPhaseIncluded !== false,
       trayViewAll: source.trayViewAll === true,
+      boardColumns: clamp(Math.max(Number(source.boardColumns) || MIN_BOARD_GRID_COLUMNS, requiredColumns), MIN_BOARD_GRID_COLUMNS, MAX_BOARD_GRID_COLUMNS),
       updatedAt: source.updatedAt || new Date().toISOString()
     };
   }
@@ -219,7 +233,11 @@
   function markerHtml(marker, location) {
     const isBoard = location === 'board';
     const className = isBoard ? 'board-marker' : `tray-marker ${location === 'drawer' ? 'drawer-marker' : ''}`.trim();
-    const style = isBoard ? `left:${marker.x * 100}%;top:${marker.y * 100}%` : '';
+    const boardColumns = getBoardGridColumns();
+    const boardX = isBoard && marker.tier != null
+      ? (inferredSlot(marker).col + .5) / boardColumns
+      : marker.x;
+    const style = isBoard ? `left:${boardX * 100}%;top:${marker.y * 100}%` : '';
     const selectedClass = selectedMarkerIds.has(marker.id) ? ' is-selected' : '';
     const scoreSelectedClass = isBoard && scoreSelectedMarkerIds.has(marker.id) ? ' is-score-selected' : '';
     const secondPhaseClass = marker.isSecondPhase ? ' is-second-phase' : '';
@@ -331,7 +349,9 @@
   }
 
   function renderMarkers() {
+    ensureBoardCapacityFromMarkers();
     reflowAllTiers();
+    syncBoardGeometry();
     tierZones.forEach((zone) => {
       const tier = Number(zone.dataset.tier);
       zone.innerHTML = sortedTierMarkers(tier).map((marker) => markerHtml(marker, 'board')).join('');
@@ -806,13 +826,14 @@
 
   function orderedMarkers(ids) {
     const idSet = new Set(ids);
+    const columns = getBoardGridColumns();
     return state.markers.filter((marker) => idSet.has(marker.id)).sort((a, b) => {
       const tierA = a.tier == null ? 9 : a.tier;
       const tierB = b.tier == null ? 9 : b.tier;
-      const rowA = Number.isFinite(Number(a.gridRow)) ? Number(a.gridRow) : Math.floor((a.layoutOrder || 0) / BOARD_GRID_COLUMNS);
-      const rowB = Number.isFinite(Number(b.gridRow)) ? Number(b.gridRow) : Math.floor((b.layoutOrder || 0) / BOARD_GRID_COLUMNS);
-      const colA = Number.isFinite(Number(a.gridCol)) ? Number(a.gridCol) : (a.layoutOrder || 0) % BOARD_GRID_COLUMNS;
-      const colB = Number.isFinite(Number(b.gridCol)) ? Number(b.gridCol) : (b.layoutOrder || 0) % BOARD_GRID_COLUMNS;
+      const rowA = Number.isFinite(Number(a.gridRow)) ? Number(a.gridRow) : Math.floor((a.layoutOrder || 0) / columns);
+      const rowB = Number.isFinite(Number(b.gridRow)) ? Number(b.gridRow) : Math.floor((b.layoutOrder || 0) / columns);
+      const colA = Number.isFinite(Number(a.gridCol)) ? Number(a.gridCol) : (a.layoutOrder || 0) % columns;
+      const colB = Number.isFinite(Number(b.gridCol)) ? Number(b.gridCol) : (b.layoutOrder || 0) % columns;
       return tierA - tierB || rowA - rowB || colA - colB || Date.parse(a.createdAt) - Date.parse(b.createdAt);
     });
   }
@@ -848,14 +869,49 @@
     return state.markers.find((item) => item.id === String(id)) || null;
   }
 
+  function getBoardGridColumns() {
+    return clamp(Math.round(Number(state.boardColumns) || MIN_BOARD_GRID_COLUMNS), MIN_BOARD_GRID_COLUMNS, MAX_BOARD_GRID_COLUMNS);
+  }
+
+  function ensureBoardColumns(minimumColumns) {
+    const next = clamp(Math.ceil(Number(minimumColumns) || MIN_BOARD_GRID_COLUMNS), MIN_BOARD_GRID_COLUMNS, MAX_BOARD_GRID_COLUMNS);
+    if (next <= getBoardGridColumns()) return false;
+    state.boardColumns = next;
+    return true;
+  }
+
+  function ensureBoardCapacityFromMarkers() {
+    const highestColumn = state.markers.reduce((highest, marker) => {
+      if (marker.tier == null || !Number.isFinite(Number(marker.gridCol))) return highest;
+      return Math.max(highest, Math.round(Number(marker.gridCol)));
+    }, -1);
+    const densestTier = Math.max(...[1, 2, 3].map((tier) => state.markers.filter((marker) => marker.tier === tier).length), 0);
+    ensureBoardColumns(Math.max(
+      MIN_BOARD_GRID_COLUMNS,
+      highestColumn + 1 + BOARD_TRAILING_COLUMNS,
+      densestTier + BOARD_TRAILING_COLUMNS
+    ));
+  }
+
+  function syncBoardGeometry() {
+    const scroll = document.getElementById('constraint-board-scroll');
+    if (!board || !scroll) return;
+    const viewportWidth = Math.max(1, scroll.clientWidth || board.parentElement?.clientWidth || 1500);
+    const columnWidth = Math.max(175, (viewportWidth - BOARD_LABEL_WIDTH) / MIN_BOARD_GRID_COLUMNS);
+    const contentWidth = Math.ceil(BOARD_LABEL_WIDTH + getBoardGridColumns() * columnWidth);
+    board.style.setProperty('--board-content-width', `${contentWidth}px`);
+    board.style.setProperty('--board-column-count', String(getBoardGridColumns()));
+  }
+
   function sortedTierMarkers(tier, excludingId = null) {
+    const columns = getBoardGridColumns();
     return state.markers
       .filter((marker) => marker.tier === Number(tier) && marker.id !== excludingId)
       .sort((a, b) => {
-        const rowA = Number.isFinite(Number(a.gridRow)) ? Number(a.gridRow) : Math.floor((a.layoutOrder || 0) / BOARD_GRID_COLUMNS);
-        const rowB = Number.isFinite(Number(b.gridRow)) ? Number(b.gridRow) : Math.floor((b.layoutOrder || 0) / BOARD_GRID_COLUMNS);
-        const colA = Number.isFinite(Number(a.gridCol)) ? Number(a.gridCol) : (a.layoutOrder || 0) % BOARD_GRID_COLUMNS;
-        const colB = Number.isFinite(Number(b.gridCol)) ? Number(b.gridCol) : (b.layoutOrder || 0) % BOARD_GRID_COLUMNS;
+        const rowA = Number.isFinite(Number(a.gridRow)) ? Number(a.gridRow) : Math.floor((a.layoutOrder || 0) / columns);
+        const rowB = Number.isFinite(Number(b.gridRow)) ? Number(b.gridRow) : Math.floor((b.layoutOrder || 0) / columns);
+        const colA = Number.isFinite(Number(a.gridCol)) ? Number(a.gridCol) : (a.layoutOrder || 0) % columns;
+        const colB = Number.isFinite(Number(b.gridCol)) ? Number(b.gridCol) : (b.layoutOrder || 0) % columns;
         return rowA - rowB || colA - colB || Date.parse(a.createdAt) - Date.parse(b.createdAt);
       });
   }
@@ -865,18 +921,20 @@
   }
 
   function inferredSlot(marker) {
+    const columns = getBoardGridColumns();
     const gridCol = Number.isFinite(Number(marker.gridCol))
-      ? clamp(Math.round(Number(marker.gridCol)), 0, BOARD_GRID_COLUMNS - 1)
-      : clamp(Math.floor(clamp(Number(marker.x) || .5, 0, .9999) * BOARD_GRID_COLUMNS), 0, BOARD_GRID_COLUMNS - 1);
+      ? clamp(Math.round(Number(marker.gridCol)), 0, MAX_BOARD_GRID_COLUMNS - 1)
+      : clamp(Math.floor(clamp(Number(marker.x) || .5, 0, .9999) * columns), 0, columns - 1);
     return { row: 0, col: gridCol };
   }
 
   function findNearestFreeSlot(occupied, targetCol) {
-    const col = clamp(Math.round(Number(targetCol) || 0), 0, BOARD_GRID_COLUMNS - 1);
+    const columns = getBoardGridColumns();
+    const col = clamp(Math.round(Number(targetCol) || 0), 0, columns - 1);
     if (!occupied.has(slotKey(0, col))) return { row: 0, col };
-    for (let distance = 1; distance < BOARD_GRID_COLUMNS; distance += 1) {
+    for (let distance = 1; distance < columns; distance += 1) {
       const candidates = [col - distance, col + distance]
-        .filter((candidateCol) => candidateCol >= 0 && candidateCol < BOARD_GRID_COLUMNS);
+        .filter((candidateCol) => candidateCol >= 0 && candidateCol < columns);
       const freeCol = candidates.find((candidateCol) => !occupied.has(slotKey(0, candidateCol)));
       if (freeCol != null) return { row: 0, col: freeCol };
     }
@@ -885,30 +943,24 @@
 
   function reflowTier(tier) {
     const markers = sortedTierMarkers(tier);
+    const highestDesired = markers.reduce((highest, marker) => Math.max(highest, inferredSlot(marker).col), -1);
+    ensureBoardColumns(Math.max(markers.length + BOARD_TRAILING_COLUMNS, highestDesired + 1 + BOARD_TRAILING_COLUMNS));
     const zone = tierZones.find((item) => Number(item.dataset.tier) === Number(tier));
     const rowElement = zone?.closest('.score-row');
     const occupied = new Set();
-    const overflow = [];
     markers.forEach((marker) => {
       const desired = inferredSlot(marker);
-      const slot = findNearestFreeSlot(occupied, desired.col);
-      if (!slot) {
-        overflow.push(marker);
-        return;
+      let slot = findNearestFreeSlot(occupied, desired.col);
+      if (!slot && ensureBoardColumns(getBoardGridColumns() + BOARD_TRAILING_COLUMNS)) {
+        slot = findNearestFreeSlot(occupied, desired.col);
       }
+      if (!slot) return;
       occupied.add(slotKey(0, slot.col));
       marker.gridCol = slot.col;
       marker.gridRow = 0;
       marker.layoutOrder = slot.col;
-      marker.x = (slot.col + .5) / BOARD_GRID_COLUMNS;
+      marker.x = (slot.col + .5) / getBoardGridColumns();
       marker.y = .5;
-    });
-    overflow.forEach((marker) => {
-      marker.tier = null;
-      marker.gridCol = null;
-      marker.gridRow = null;
-      marker.layoutOrder = 0;
-      scoreSelectedMarkerIds.delete(marker.id);
     });
     if (rowElement) rowElement.style.height = '190px';
   }
@@ -919,7 +971,8 @@
 
   function dropSlotForPoint(zone, x, y, markerIds) {
     const rect = zone.getBoundingClientRect();
-    const col = clamp(Math.floor(((x - rect.left) / Math.max(1, rect.width)) * BOARD_GRID_COLUMNS), 0, BOARD_GRID_COLUMNS - 1);
+    const columns = getBoardGridColumns();
+    const col = clamp(Math.floor(((x - rect.left) / Math.max(1, rect.width)) * columns), 0, columns - 1);
     return { row: 0, col };
   }
 
@@ -927,6 +980,7 @@
     const ids = [...new Set(markerIds.map(String))];
     const moving = orderedMarkers(ids);
     if (!moving.length) return false;
+    ensureBoardColumns(Number(targetCol) + moving.length + BOARD_TRAILING_COLUMNS);
     const oldTiers = new Set(moving.map((marker) => marker.tier).filter((value) => value != null));
     const idSet = new Set(ids);
     const destination = sortedTierMarkers(tier).filter((marker) => !idSet.has(marker.id));
@@ -934,8 +988,11 @@
     const planned = [];
     moving.forEach((marker, index) => {
       if (planned.length !== index) return;
-      const desiredCol = clamp(Number(targetCol) + index, 0, BOARD_GRID_COLUMNS - 1);
-      const slot = findNearestFreeSlot(occupied, desiredCol);
+      const desiredCol = clamp(Number(targetCol) + index, 0, getBoardGridColumns() - 1);
+      let slot = findNearestFreeSlot(occupied, desiredCol);
+      if (!slot && ensureBoardColumns(getBoardGridColumns() + BOARD_TRAILING_COLUMNS)) {
+        slot = findNearestFreeSlot(occupied, desiredCol);
+      }
       if (!slot) return;
       occupied.add(slotKey(0, slot.col));
       planned.push({ marker, slot });
@@ -950,19 +1007,20 @@
     });
     oldTiers.forEach((oldTier) => { if (oldTier !== Number(tier)) reflowTier(oldTier); });
     reflowTier(tier);
+    ensureBoardCapacityFromMarkers();
     return true;
   }
-
-
 
   function nearestValidHorizontalDelta(markerIds, requestedDelta) {
     const moving = orderedMarkers(markerIds).filter((marker) => marker.tier != null);
     if (!moving.length) return null;
     const minCol = Math.min(...moving.map((marker) => inferredSlot(marker).col));
     const maxCol = Math.max(...moving.map((marker) => inferredSlot(marker).col));
+    const desiredRaw = Math.round(Number(requestedDelta) || 0);
+    ensureBoardColumns(maxCol + desiredRaw + 1 + BOARD_TRAILING_COLUMNS);
     const minDelta = -minCol;
-    const maxDelta = BOARD_GRID_COLUMNS - 1 - maxCol;
-    const desired = clamp(Math.round(Number(requestedDelta) || 0), minDelta, maxDelta);
+    const maxDelta = getBoardGridColumns() - 1 - maxCol;
+    const desired = clamp(desiredRaw, minDelta, maxDelta);
     const candidates = [];
     for (let delta = minDelta; delta <= maxDelta; delta += 1) candidates.push(delta);
     candidates.sort((a, b) => Math.abs(a - desired) - Math.abs(b - desired) || Math.abs(a) - Math.abs(b));
@@ -974,7 +1032,7 @@
     )]));
     return candidates.find((delta) => moving.every((marker) => {
       const col = inferredSlot(marker).col + delta;
-      return col >= 0 && col < BOARD_GRID_COLUMNS && !occupiedByTier.get(marker.tier).has(col);
+      return col >= 0 && col < getBoardGridColumns() && !occupiedByTier.get(marker.tier).has(col);
     })) ?? null;
   }
 
@@ -990,14 +1048,16 @@
       marker.gridCol = col;
       marker.gridRow = 0;
       marker.layoutOrder = col;
-      marker.x = (col + .5) / BOARD_GRID_COLUMNS;
+      marker.x = (col + .5) / getBoardGridColumns();
       marker.y = .5;
       marker.updatedAt = new Date().toISOString();
     });
+    ensureBoardCapacityFromMarkers();
     return true;
   }
 
   function placeMarkersInTier(markerIds, tier) {
+    ensureBoardColumns(sortedTierMarkers(tier).length + markerIds.length + BOARD_TRAILING_COLUMNS);
     reflowTier(tier);
     const movingIds = new Set(markerIds.map(String));
     const occupied = new Set(sortedTierMarkers(tier)
@@ -2200,6 +2260,7 @@
   }
 
   window.addEventListener('resize', () => requestAnimationFrame(() => {
+    syncBoardGeometry();
     syncBoardControlAlignment();
     syncManagementPanelAlignment();
     renderRelations();

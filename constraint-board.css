@@ -37,8 +37,8 @@
 .legend-line.synergy::before { top:3px; }.legend-line.synergy::after { top:8px; }
 .board-instruction { display:flex; flex-wrap:wrap; gap:8px; padding:0 24px 16px; }
 .board-instruction span { padding:7px 10px; border-radius:999px; background:#f0f4f7; color:#65727e; font-size:12px; font-weight:800; }
-.constraint-board-scroll { overflow-x:auto; border-top:1px solid #313943; border-bottom:1px solid #313943; background:var(--board-dark); scrollbar-color:#77818c #20262e; }
-.constraint-board { position:relative; width:max(1500px,100%); min-height:570px; background:linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),var(--board-dark); background-size:42px 42px; isolation:isolate; }
+.constraint-board-scroll { overflow-x:auto; overflow-y:hidden; border-top:1px solid #313943; border-bottom:1px solid #313943; background:var(--board-dark); scrollbar-color:#9aa5af #20262e; scrollbar-gutter:stable; }
+.constraint-board { position:relative; width:max(100%,var(--board-content-width,1500px)); min-height:570px; background:linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),var(--board-dark); background-size:42px 42px; isolation:isolate; }
 .score-row { position:relative; display:grid; grid-template-columns:95px 1fr; height:190px; border-bottom:2px solid #37404b; }
 .score-row:last-child { border-bottom:0; }
 .score-row::before { content:""; position:absolute; inset:0 auto 0 0; width:8px; z-index:3; }
@@ -1289,3 +1289,27 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
 
 
 /* v93: match the drag-selection marquee to the yellow multi-selection outline. */
+
+
+/* v94: horizontally expandable board workspace with a persistent bottom scrollbar. */
+.constraint-board-scroll::-webkit-scrollbar { height: 14px; }
+.constraint-board-scroll::-webkit-scrollbar-track {
+  background: #20262e;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.constraint-board-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid #20262e;
+  border-radius: 999px;
+  background: #8f99a4;
+}
+.constraint-board-scroll::-webkit-scrollbar-thumb:hover { background: #b0bac4; }
+.constraint-board {
+  transition: width .18s ease-out;
+}
+
+
+/* v95: match the collapsed version-history bar height to the recommendation bar. */
+.recommendation-work-panel.is-collapsed > .work-panel-heading,
+.version-panel.is-collapsed > .work-panel-heading {
+  min-height: 88px;
+}

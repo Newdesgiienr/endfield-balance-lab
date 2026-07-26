@@ -6,7 +6,7 @@
   <meta name="description" content="제약 마크를 위기 협약 제약 설계 현황판에 배치하고 충돌·시너지 관계와 버전별 설계 기록을 관리하는 Endfield Balance Lab 제약 설계 페이지">
   <title>제약 설계 | Endfield Balance Lab</title>
   <link rel="stylesheet" href="styles.css?v=68">
-  <link rel="stylesheet" href="constraint-board.css?v=93">
+  <link rel="stylesheet" href="constraint-board.css?v=95">
 </head>
 <body>
   <header class="app-topbar">
@@ -79,7 +79,7 @@
         </div>
       </div>
       <div id="board-drop-hint" class="board-instruction">
-        <span>드래그: 배치·이동</span><span>빈 공간 드래그: 범위 선택</span><span>클릭: 총점 포함/제외</span><span>SHIFT+클릭: 여러 마크 선택</span><span>선택 마크 드래그: 점수 줄 유지·가로 이동</span><span>ENTER: 일반 묶음</span><span>↑ 방향키: 문지기 묶음</span><span>↓ 방향키: 2차 제약 지정/해제</span><span>아래로 끌기: 현황판에서 제거</span><span>길게 누르기: 충돌 연결</span><span>빠르게 세 번 누르기: 시너지 연결</span><strong id="marker-selection-status" class="marker-selection-status" aria-live="polite" hidden>선택 없음</strong>
+        <span>드래그: 배치·이동</span><span>빈 공간 드래그: 범위 선택</span><span>오른쪽 배치: 현황판 자동 확장</span><span>클릭: 총점 포함/제외</span><span>SHIFT+클릭: 여러 마크 선택</span><span>선택 마크 드래그: 점수 줄 유지·가로 이동</span><span>ENTER: 일반 묶음</span><span>↑ 방향키: 문지기 묶음</span><span>↓ 방향키: 2차 제약 지정/해제</span><span>아래로 끌기: 현황판에서 제거</span><span>길게 누르기: 충돌 연결</span><span>빠르게 세 번 누르기: 시너지 연결</span><strong id="marker-selection-status" class="marker-selection-status" aria-live="polite" hidden>선택 없음</strong>
       </div>
     </section>
 
@@ -119,7 +119,7 @@
 
     <section class="work-panel version-panel collapsible-work-panel is-collapsed" aria-labelledby="version-title">
       <header class="work-panel-heading collapsible-panel-heading">
-        <div><small>DESIGN HISTORY</small><h2 id="version-title">버전 기록</h2><p>현재 작업판은 브라우저에 자동 저장되며, 아래 기록은 직접 남긴 고정 스냅샷입니다.</p></div>
+        <div><small>DESIGN HISTORY</small><h2 id="version-title">버전 기록</h2></div>
         <div class="panel-heading-actions"><span id="version-count" class="panel-count">0개 버전</span><button class="panel-collapse-toggle" type="button" data-collapse-panel="version-panel-content" data-collapse-label="버전 기록" aria-expanded="false" aria-controls="version-panel-content"><span>버전 기록 펼치기</span><i aria-hidden="true"></i></button></div>
       </header>
       <div id="version-panel-content" class="collapsible-panel-content" hidden><div id="version-list" class="version-list"></div></div>
@@ -173,6 +173,6 @@
   <script src="saved-analyses.js?v=64"></script>
   <script src="analysis-store.js?v=63"></script>
   <script src="constraint-data.js?v=74"></script>
-  <script src="constraint-board.js?v=93"></script>
+  <script src="constraint-board.js?v=95"></script>
 </body>
 </html>
