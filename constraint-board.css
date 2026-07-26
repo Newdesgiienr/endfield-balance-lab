@@ -1429,3 +1429,26 @@ body.placement-drawer-dragging {
     radial-gradient(circle at 16px 4px, currentColor 0 1.6px, transparent 1.8px);
   background-repeat: no-repeat;
 }
+
+/* v101: render horizontal gatekeeper-cell tint with valid CSS. */
+.gatekeeper-group-line {
+  filter: drop-shadow(0 0 6px rgba(177, 132, 255, .66));
+}
+.gatekeeper-group-node {
+  filter: drop-shadow(0 0 6px rgba(177, 132, 255, .88));
+}
+.tier-dropzone {
+  isolation: isolate;
+}
+.gatekeeper-cell-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+  display: block;
+  background: rgba(108, 132, 176, .18);
+  box-shadow:
+    inset 0 0 0 1px rgba(157, 176, 213, .16),
+    inset 0 0 42px rgba(108, 132, 176, .1);
+  pointer-events: none;
+}

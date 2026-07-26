@@ -350,13 +350,37 @@
     });
   }
 
+  function horizontalGatekeeperCellColumns(tier) {
+    const columns = new Set();
+    (state.groups || []).forEach((group) => {
+      if (group.type !== 'gatekeeper') return;
+      const members = placedGroupMarkers(group);
+      if (members.length < 2) return;
+      const memberTiers = new Set(members.map((marker) => Number(marker.tier)));
+      if (memberTiers.size !== 1 || !memberTiers.has(Number(tier))) return;
+      const memberColumns = [...new Set(members.map((marker) => inferredSlot(marker).col))];
+      if (memberColumns.length < 2) return;
+      memberColumns.forEach((column) => columns.add(column));
+    });
+    return [...columns].sort((a, b) => a - b);
+  }
+
+  function gatekeeperCellOverlayHtml(tier) {
+    const boardColumns = getBoardGridColumns();
+    return horizontalGatekeeperCellColumns(tier).map((column) => {
+      const left = (column / boardColumns) * 100;
+      const width = 100 / boardColumns;
+      return `<span class="gatekeeper-cell-overlay" aria-hidden="true" style="left:${left}%;width:${width}%"></span>`;
+    }).join('');
+  }
+
   function renderMarkers() {
     ensureBoardCapacityFromMarkers();
     reflowAllTiers();
     syncBoardGeometry();
     tierZones.forEach((zone) => {
       const tier = Number(zone.dataset.tier);
-      zone.innerHTML = sortedTierMarkers(tier).map((marker) => markerHtml(marker, 'board')).join('');
+      zone.innerHTML = gatekeeperCellOverlayHtml(tier) + sortedTierMarkers(tier).map((marker) => markerHtml(marker, 'board')).join('');
     });
     applyBoardFilters();
     const unplaced = state.markers.filter((marker) => marker.tier == null);
@@ -1640,14 +1664,14 @@
       const edges = groupTreeEdges(group);
       if (!edges.length) return;
       const isGatekeeper = group.type === 'gatekeeper';
-      const stroke = isGatekeeper ? '#2fc978' : '#ffffff';
+      const stroke = isGatekeeper ? '#b184ff' : '#ffffff';
       edges.forEach((edge) => {
         html += svgPath(edge.points, `class="group-hit" data-group-id="${esc(group.id)}" fill="none"`);
         html += svgPath(edge.points, `class="group-visible ${isGatekeeper ? 'gatekeeper-group-line' : 'normal-group-line'}" fill="none" stroke="${stroke}" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"`);
       });
       if (isGatekeeper) {
         const midpoint = groupMidpoint(edges);
-        if (midpoint) html += `<circle class="gatekeeper-group-node" cx="${midpoint.x.toFixed(2)}" cy="${midpoint.y.toFixed(2)}" r="7" fill="#2fc978" stroke="#eafff3" stroke-width="2"></circle>`;
+        if (midpoint) html += `<circle class="gatekeeper-group-node" cx="${midpoint.x.toFixed(2)}" cy="${midpoint.y.toFixed(2)}" r="7" fill="#b184ff" stroke="#f3ebff" stroke-width="2"></circle>`;
       }
     });
     return html;
