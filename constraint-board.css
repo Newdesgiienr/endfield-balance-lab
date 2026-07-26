@@ -747,3 +747,289 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
   opacity:.9;
   box-shadow:0 0 0 2px rgba(255,255,255,.42),0 14px 34px rgba(0,0,0,.34);
 }
+
+/* v78: collapsible information panels, persistent filter layout, pixel-aligned controls and edge-to-edge relation lines */
+
+/* Keep the heading action aligned with the right edge of the relation switches. */
+@media (min-width:1101px) {
+  .designer-heading-actions { margin-right:25px; }
+}
+
+/* Align the score total card directly above the score filter group. */
+@media (min-width:1101px) {
+  .board-title-line {
+    display:grid;
+    grid-template-columns:var(--board-filter-category-width,220px) max-content;
+    align-items:center;
+    column-gap:10px;
+  }
+  .board-title-line h2 { min-width:0; }
+  .board-filter-bar {
+    display:grid;
+    grid-template-columns:max-content max-content minmax(0,1fr);
+    align-items:center;
+    padding-inline:24px;
+  }
+  .board-filter-count { justify-self:end; margin-left:0; }
+}
+
+/* One continuous score strip with no seams between yellow, orange and red. */
+.constraint-board::before {
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  z-index:7;
+  width:8px;
+  pointer-events:none;
+  background:linear-gradient(
+    to bottom,
+    #ffd400 0,
+    #ffd400 33.333333%,
+    #ff9300 33.333333%,
+    #ff9300 66.666667%,
+    #ff284f 66.666667%,
+    #ff284f 100%
+  );
+}
+.score-row::before { display:none; }
+
+/* Filters now de-emphasize unmatched markers without removing them or their rows. */
+.score-row.is-score-filtered-out { display:grid; }
+.board-marker.is-board-filtered-out { display:block !important; }
+.board-marker.is-board-filter-dimmed {
+  opacity:.38;
+  filter:grayscale(1) saturate(0) brightness(.8);
+  transition:opacity .18s ease,filter .18s ease,box-shadow .18s ease;
+}
+.board-marker:not(.is-board-filter-dimmed) {
+  transition:opacity .18s ease,filter .18s ease,box-shadow .18s ease;
+}
+.board-marker.is-board-filter-dimmed.is-score-selected { opacity:.58; }
+.board-marker.is-score-blocked.is-board-filter-dimmed:not(.is-score-selected) {
+  opacity:.32;
+  filter:grayscale(1) saturate(0) brightness(.72);
+}
+
+/* Creation form and storage cards share the same measured bottom edge. */
+.marker-tray-categories { align-items:start; }
+.tray-category {
+  display:flex;
+  flex-direction:column;
+  height:var(--synced-tray-card-height,auto);
+}
+.tray-category-grid {
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
+}
+@media (max-width:900px) {
+  .tray-category { height:auto !important; }
+  .tray-category-grid { min-height:248px; overflow:visible; }
+}
+
+/* Collapsible recommendation and version information bars. */
+.collapsible-panel-heading { align-items:center; }
+.panel-heading-actions { display:flex; align-items:center; gap:9px; flex:none; }
+.panel-collapse-toggle {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:34px;
+  padding:7px 10px;
+  border:1px solid #d5dde5;
+  border-radius:10px;
+  background:#fff;
+  color:#586672;
+  font:inherit;
+  font-size:12px;
+  font-weight:950;
+  cursor:pointer;
+  transition:border-color .16s ease,background .16s ease,color .16s ease;
+}
+.panel-collapse-toggle:hover { border-color:#9eabb6; background:#f4f7f9; color:#263541; }
+.panel-collapse-toggle i { display:block; font-size:15px; font-style:normal; line-height:1; transition:transform .18s ease; }
+.panel-collapse-toggle[aria-expanded="false"] i { transform:rotate(180deg); }
+.collapsible-panel-content[hidden] { display:none !important; }
+.collapsible-work-panel.is-collapsed .work-panel-heading { border-bottom:0; }
+@media (max-width:700px) {
+  .collapsible-panel-heading { align-items:flex-start; }
+  .panel-heading-actions { align-items:flex-end; flex-direction:column; }
+}
+
+/* Relation/group strokes terminate at the marker border; round caps overlap it slightly. */
+.relation-visible,
+.group-visible { shape-rendering:geometricPrecision; }
+
+
+/* v79: indicator-design title, matched score controls, and pill-style collapse buttons */
+.score-selection-total {
+  width:var(--board-filter-score-width,auto);
+  justify-content:space-between;
+}
+.score-selection-total span {
+  font-size:14px;
+  line-height:1.2;
+}
+
+@media (min-width:1101px) {
+  .board-title-line {
+    grid-template-columns:var(--board-filter-category-width,220px) var(--board-filter-score-width,238px);
+  }
+}
+
+.panel-collapse-toggle {
+  min-height:30px;
+  padding:6px 10px;
+  gap:6px;
+  border:0;
+  border-radius:999px;
+  background:#b84b37;
+  color:#fff;
+  box-shadow:0 4px 10px rgba(137,48,34,.18);
+  font-size:11.5px;
+  line-height:1;
+}
+.panel-collapse-toggle:hover {
+  border-color:transparent;
+  background:#9f3f2f;
+  color:#fff;
+}
+.panel-collapse-toggle span {
+  display:inline-flex;
+  align-items:center;
+  min-height:14px;
+  line-height:1.2;
+}
+.panel-collapse-toggle i {
+  display:inline-block;
+  flex:0 0 auto;
+  width:0;
+  height:0;
+  margin:0;
+  border-left:4px solid transparent;
+  border-right:4px solid transparent;
+  border-top:5px solid currentColor;
+  font-size:0;
+  line-height:0;
+  transform:rotate(180deg);
+  transform-origin:50% 50%;
+  transition:transform .18s ease;
+}
+.panel-collapse-toggle[aria-expanded="false"] i {
+  transform:rotate(0deg);
+}
+
+@media (max-width:700px) {
+  .score-selection-total span { font-size:13px; }
+}
+
+
+/* v80: larger recommendation/version status text and updated board title. */
+.panel-heading-actions .panel-count {
+  font-size:14px;
+}
+.panel-heading-actions .panel-collapse-toggle {
+  font-size:12.5px;
+}
+@media (max-width:700px) {
+  .panel-heading-actions .panel-count { font-size:13.5px; }
+  .panel-heading-actions .panel-collapse-toggle { font-size:12px; }
+}
+
+/* v81: default-collapsed information bars and second-update constraint controls */
+.panel-collapse-toggle {
+  background: var(--accent, #d7553e);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(170, 61, 43, .2);
+}
+.panel-collapse-toggle:hover {
+  border-color: transparent;
+  background: #c94d38;
+  color: #fff;
+}
+
+/* Keep the optional 2차 badge and category badge centered as one unit. */
+.marker-badge-row {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.marker-badge-row .marker-category {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  min-width: 54px;
+  padding: 4px 11px;
+  font-size: 12px;
+  letter-spacing: .065em;
+}
+.marker-phase-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 42px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e45d44;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .25);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .045em;
+}
+
+/* Second-update include/exclude switch placed after the synergy switch. */
+.second-phase-switch b em {
+  font-style: normal;
+}
+.second-phase-legend {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e45d44;
+  color: #fff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 950;
+  letter-spacing: .02em;
+}
+.second-phase-switch input:not(:checked) ~ b .second-phase-legend {
+  background: #8996a2;
+}
+
+/* Excluded second-update markers keep their cell and remain identifiable. */
+.board-marker.is-second-phase-excluded,
+.tray-marker.is-second-phase-excluded,
+.drawer-marker.is-second-phase-excluded {
+  opacity: .38;
+  filter: grayscale(1) saturate(0) brightness(.82);
+}
+.board-marker.is-second-phase-excluded.is-selected,
+.tray-marker.is-second-phase-excluded.is-selected,
+.drawer-marker.is-second-phase-excluded.is-selected {
+  opacity: .58;
+}
+
+.drag-ghost .marker-badge-row {
+  top: -14px;
+}
+
+@media (max-width: 700px) {
+  .relation-visibility { flex-wrap: wrap; }
+  .marker-badge-row .marker-category,
+  .marker-phase-badge { font-size: 11px; }
+}

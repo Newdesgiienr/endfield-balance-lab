@@ -18,11 +18,12 @@
   const placementDrawerButton = document.getElementById('open-placement-modal');
   const trayViewToggle = document.getElementById('toggle-tray-view');
   const selectionStatus = document.getElementById('marker-selection-status');
-  const clearSelectionButton = document.getElementById('clear-marker-selection');
   const scoreSelectionTotal = document.getElementById('score-selection-total');
   const scoreSelectionValue = document.getElementById('score-selection-value');
   const conflictToggle = document.getElementById('toggle-conflict-lines');
   const synergyToggle = document.getElementById('toggle-synergy-lines');
+  const secondPhaseToggle = document.getElementById('toggle-second-phase');
+  const secondPhaseToggleLabel = document.getElementById('second-phase-toggle-label');
   const tooltip = document.getElementById('marker-tooltip');
   const relationMenu = document.getElementById('relation-menu');
   const toast = document.getElementById('toast');
@@ -86,6 +87,7 @@
       relations: [],
       groups: [],
       relationVisibility: { conflict: true, synergy: true },
+      secondPhaseIncluded: true,
       trayViewAll: false,
       updatedAt: new Date().toISOString()
     };
@@ -108,6 +110,7 @@
       gridRow: [1, 2, 3].includes(Number(item.tier)) ? 0 : null,
       layoutOrder: Number.isFinite(Number(item.layoutOrder)) ? Number(item.layoutOrder) : index,
       sourceConstraintId: item.sourceConstraintId ? String(item.sourceConstraintId) : null,
+      isSecondPhase: item.isSecondPhase === true || Number(item.updatePhase) === 2,
       createdAt: item.createdAt || new Date().toISOString(),
       updatedAt: item.updatedAt || item.createdAt || new Date().toISOString()
     })) : [];
@@ -133,6 +136,7 @@
         conflict: source.relationVisibility?.conflict !== false,
         synergy: source.relationVisibility?.synergy !== false
       },
+      secondPhaseIncluded: source.secondPhaseIncluded !== false,
       trayViewAll: source.trayViewAll === true,
       updatedAt: source.updatedAt || new Date().toISOString()
     };
@@ -204,15 +208,21 @@
     toastTimer = window.setTimeout(() => { toast.hidden = true; }, 2600);
   }
 
+  function markerBadgeHtml(marker) {
+    return `<div class="marker-badge-row">${marker.isSecondPhase ? '<span class="marker-phase-badge">2차</span>' : ''}<span class="marker-category">${esc(marker.category)}</span></div>`;
+  }
+
   function markerHtml(marker, location) {
     const isBoard = location === 'board';
     const className = isBoard ? 'board-marker' : `tray-marker ${location === 'drawer' ? 'drawer-marker' : ''}`.trim();
     const style = isBoard ? `left:${marker.x * 100}%;top:${marker.y * 100}%` : '';
     const selectedClass = selectedMarkerIds.has(marker.id) ? ' is-selected' : '';
     const scoreSelectedClass = isBoard && scoreSelectedMarkerIds.has(marker.id) ? ' is-score-selected' : '';
+    const secondPhaseClass = marker.isSecondPhase ? ' is-second-phase' : '';
+    const excludedClass = marker.isSecondPhase && state.secondPhaseIncluded === false ? ' is-second-phase-excluded' : '';
     const placementBadge = !isBoard && marker.tier != null ? `<span class="marker-placement-badge">${marker.tier}점</span>` : '';
-    return `<article class="${className}${selectedClass}${scoreSelectedClass}" data-marker-id="${esc(marker.id)}" data-marker-location="${esc(location)}" data-category="${esc(marker.category)}" style="${style}" tabindex="0" aria-selected="${selectedMarkerIds.has(marker.id)}" data-score-selected="${isBoard && scoreSelectedMarkerIds.has(marker.id)}" aria-label="${esc(marker.category)} 제약 ${esc(marker.title)}">
-      <span class="marker-category">${esc(marker.category)}</span>
+    return `<article class="${className}${selectedClass}${scoreSelectedClass}${secondPhaseClass}${excludedClass}" data-marker-id="${esc(marker.id)}" data-marker-location="${esc(location)}" data-category="${esc(marker.category)}" data-second-phase="${marker.isSecondPhase}" style="${style}" tabindex="0" aria-selected="${selectedMarkerIds.has(marker.id)}" data-score-selected="${isBoard && scoreSelectedMarkerIds.has(marker.id)}" aria-label="${marker.isSecondPhase ? '2차 ' : ''}${esc(marker.category)} 제약 ${esc(marker.title)}">
+      ${markerBadgeHtml(marker)}
       ${placementBadge}
       <button type="button" class="marker-edit-trigger" data-edit-marker="${esc(marker.id)}" aria-label="${esc(marker.title)} 수정">✎</button>
       <div class="marker-label">${rich(marker.label)}</div>
@@ -231,27 +241,29 @@
     if (!marker || marker.tier == null) return false;
     const categoryMatches = boardCategoryFilter === 'all' || marker.category === boardCategoryFilter;
     const scoreMatches = boardScoreFilter === 'all' || marker.tier === Number(boardScoreFilter);
-    return categoryMatches && scoreMatches;
+    const phaseMatches = state.secondPhaseIncluded !== false || !marker.isSecondPhase;
+    return categoryMatches && scoreMatches && phaseMatches;
   }
 
   function applyBoardFilters() {
-    let visibleCount = 0;
+    let matchingCount = 0;
+    let totalCount = 0;
     tierZones.forEach((zone) => {
-      const tier = Number(zone.dataset.tier);
       const row = zone.closest('.score-row');
-      const scoreRowVisible = boardScoreFilter === 'all' || tier === Number(boardScoreFilter);
-      row.classList.toggle('is-score-filtered-out', !scoreRowVisible);
-      const allMarkers = sortedTierMarkers(tier);
-      allMarkers.forEach((marker) => {
+      row?.classList.remove('is-score-filtered-out');
+      sortedTierMarkers(Number(zone.dataset.tier)).forEach((marker) => {
         const element = zone.querySelector(`[data-marker-id="${CSS.escape(marker.id)}"]`);
         if (!element) return;
-        const hidden = !scoreRowVisible || !markerMatchesBoardFilter(marker);
-        element.classList.toggle('is-board-filtered-out', hidden);
-        element.setAttribute('aria-hidden', String(hidden));
-        if (!hidden) visibleCount += 1;
+        const matches = markerMatchesBoardFilter(marker);
+        totalCount += 1;
+        if (matches) matchingCount += 1;
+        element.classList.remove('is-board-filtered-out');
+        element.classList.toggle('is-board-filter-dimmed', !matches);
+        element.setAttribute('aria-hidden', 'false');
+        element.setAttribute('data-board-filter-match', String(matches));
       });
     });
-    if (boardFilterCount) boardFilterCount.textContent = `표시 ${visibleCount}개`;
+    if (boardFilterCount) boardFilterCount.textContent = `일치 ${matchingCount}개 · 전체 ${totalCount}개`;
   }
 
   function syncBoardFilterButtons() {
@@ -264,6 +276,51 @@
       const active = button.dataset.boardScoreFilter === boardScoreFilter;
       button.classList.toggle('active', active);
       button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  function syncBoardControlAlignment() {
+    const card = document.querySelector('.board-card');
+    const categoryGroup = document.querySelector('.board-filter-group:not(.board-score-filter-group)');
+    const scoreGroup = document.querySelector('.board-score-filter-group');
+    if (!card || !categoryGroup || !scoreGroup) return;
+
+    // Keep the selected-score card exactly as wide as the score filter control.
+    card.style.setProperty('--board-filter-score-width', `${Math.ceil(scoreGroup.getBoundingClientRect().width)}px`);
+
+    if (window.innerWidth <= 1100) {
+      card.style.removeProperty('--board-filter-category-width');
+      return;
+    }
+    card.style.setProperty('--board-filter-category-width', `${Math.ceil(categoryGroup.getBoundingClientRect().width)}px`);
+  }
+
+  function syncManagementPanelAlignment() {
+    const description = document.getElementById('marker-description');
+    const categories = [...tray.querySelectorAll('.tray-category')];
+    if (!description || !categories.length) return;
+    if (window.innerWidth <= 900) {
+      tray.style.removeProperty('--synced-tray-card-height');
+      return;
+    }
+    const descriptionRect = description.getBoundingClientRect();
+    const categoryRect = categories[0].getBoundingClientRect();
+    const targetHeight = descriptionRect.bottom - categoryRect.top;
+    if (targetHeight > 220) tray.style.setProperty('--synced-tray-card-height', `${targetHeight}px`);
+  }
+
+  function setupCollapsiblePanels() {
+    document.querySelectorAll('[data-collapse-panel]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const content = document.getElementById(button.dataset.collapsePanel);
+        if (!content) return;
+        const willExpand = button.getAttribute('aria-expanded') !== 'true';
+        button.setAttribute('aria-expanded', String(willExpand));
+        const label = button.dataset.collapseLabel ? `${button.dataset.collapseLabel} ` : '';
+        button.querySelector('span').textContent = `${label}${willExpand ? '접기' : '펼치기'}`;
+        content.hidden = !willExpand;
+        button.closest('.collapsible-work-panel')?.classList.toggle('is-collapsed', !willExpand);
+      });
     });
   }
 
@@ -290,7 +347,11 @@
     bindMarkerEvents();
     updateSelectionUi();
     updateScoreSelectionUi();
-    requestAnimationFrame(renderRelations);
+    requestAnimationFrame(() => {
+      syncBoardControlAlignment();
+      syncManagementPanelAlignment();
+      renderRelations();
+    });
   }
 
   function bindMarkerEvents() {
@@ -320,6 +381,12 @@
           createMarkerGroup('gatekeeper');
           return;
         }
+        if (selectedMarkerIds.size >= 1 && event.key === 'ArrowDown') {
+          event.preventDefault();
+          event.stopPropagation();
+          toggleSecondPhaseSelection();
+          return;
+        }
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           openMarkerEdit(element.dataset.markerId);
@@ -341,7 +408,6 @@
     const count = selectedMarkerIds.size;
     selectionStatus.textContent = count ? `${count}개 선택됨` : '선택 없음';
     selectionStatus.classList.toggle('active', count > 0);
-    clearSelectionButton.hidden = count === 0;
   }
 
   function toggleMarkerSelection(id) {
@@ -418,6 +484,27 @@
     return true;
   }
 
+  function toggleSecondPhaseSelection() {
+    const selected = selectedPlacedMarkers();
+    if (!selectedMarkerIds.size || selected.length !== selectedMarkerIds.size) {
+      showToast('현황판에 배치된 제약 마크를 SHIFT로 선택하세요.');
+      return false;
+    }
+    const markAsSecondPhase = !selected.every((marker) => marker.isSecondPhase);
+    selected.forEach((marker) => {
+      marker.isSecondPhase = markAsSecondPhase;
+      marker.updatedAt = new Date().toISOString();
+      if (!markAsSecondPhase) scoreSelectedMarkerIds.delete(marker.id);
+    });
+    pruneInvalidScoreSelections();
+    renderMarkers();
+    scheduleSave();
+    showToast(markAsSecondPhase
+      ? `${selected.length}개 제약을 위기협약 2차 업데이트 제약으로 지정했습니다.`
+      : `${selected.length}개 제약의 2차 업데이트 표시를 해제했습니다.`);
+    return true;
+  }
+
   function markerGroupMembership(id) {
     return (state.groups || []).filter((group) => (group.markerIds || []).includes(String(id)));
   }
@@ -455,6 +542,7 @@
   }
 
   function scoreBlockReason(marker, selectedIds = scoreSelectedMarkerIds) {
+    if (marker?.isSecondPhase && state.secondPhaseIncluded === false) return '2차 제약 미포함 상태에서는 총점에 포함할 수 없습니다.';
     const conflict = conflictingSelectedMarker(marker.id, selectedIds);
     if (conflict) return `선택한 “${conflict.label}” 제약과 충돌하여 함께 포함할 수 없습니다.`;
     const gate = gatekeeperBlocker(marker, selectedIds);
@@ -465,7 +553,7 @@
   function pruneInvalidScoreSelections() {
     [...scoreSelectedMarkerIds].forEach((id) => {
       const marker = getMarker(id);
-      if (!marker || marker.tier == null) scoreSelectedMarkerIds.delete(id);
+      if (!marker || marker.tier == null || (marker.isSecondPhase && state.secondPhaseIncluded === false)) scoreSelectedMarkerIds.delete(id);
     });
 
     const kept = new Set();
@@ -907,7 +995,7 @@
         const ghost = document.createElement('article');
         ghost.className = 'drag-ghost locked-tier-drag-ghost';
         ghost.dataset.category = item.category;
-        ghost.innerHTML = `<span class="marker-category">${esc(item.category)}</span><div class="marker-label">${rich(item.label)}</div>`;
+        ghost.innerHTML = `${markerBadgeHtml(item)}<div class="marker-label">${rich(item.label)}</div>`;
         document.body.appendChild(ghost);
         return {
           element: ghost,
@@ -919,7 +1007,7 @@
       const ghost = document.createElement('article');
       ghost.className = `drag-ghost ${count > 1 ? 'multi-drag-ghost' : ''}`;
       ghost.dataset.category = marker.category;
-      ghost.innerHTML = `<span class="marker-category">${esc(marker.category)}</span><div class="marker-label">${rich(marker.label)}</div>${count > 1 ? `<b class="drag-count-badge">+${count - 1}</b>` : ''}`;
+      ghost.innerHTML = `${markerBadgeHtml(marker)}<div class="marker-label">${rich(marker.label)}</div>${count > 1 ? `<b class="drag-count-badge">+${count - 1}</b>` : ''}`;
       document.body.appendChild(ghost);
       interaction.ghost = ghost;
     }
@@ -1088,28 +1176,35 @@
     showToast(`${label} 관계를 기록했습니다.`);
   }
 
-  function markerCenter(id) {
+  function markerGeometry(id) {
     const element = document.querySelector(`.board-marker[data-marker-id="${CSS.escape(id)}"]`);
-    if (!element || element.classList.contains('is-board-filtered-out') || element.closest('.score-row')?.classList.contains('is-score-filtered-out')) return null;
+    if (!element) return null;
     const boardRect = board.getBoundingClientRect();
     const rect = element.getBoundingClientRect();
-    return { x: rect.left - boardRect.left + rect.width / 2, y: rect.top - boardRect.top + rect.height / 2 };
+    const left = rect.left - boardRect.left;
+    const top = rect.top - boardRect.top;
+    return {
+      id,
+      element,
+      left,
+      top,
+      right: left + rect.width,
+      bottom: top + rect.height,
+      width: rect.width,
+      height: rect.height,
+      x: left + rect.width / 2,
+      y: top + rect.height / 2
+    };
+  }
+
+  function markerCenter(id) {
+    const geometry = markerGeometry(id);
+    return geometry ? { x: geometry.x, y: geometry.y } : null;
   }
 
   function svgLine(x1, y1, x2, y2, attrs = '') {
     return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" ${attrs}></line>`;
   }
-
-  function doubleLinePoints(a, b, offset) {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const length = Math.max(1, Math.hypot(dx, dy));
-    const px = -dy / length * offset;
-    const py = dx / length * offset;
-    return [{ x: a.x + px, y: a.y + py }, { x: b.x + px, y: b.y + py }];
-  }
-
-
 
   function svgPath(points, attrs = '') {
     if (!points.length) return '';
@@ -1118,19 +1213,86 @@
     return `<path d="${commands.join(' ')}" ${attrs}></path>`;
   }
 
+  function rayToMarkerEdge(origin, toward, geometry, overlap = 1.25) {
+    const dx = toward.x - origin.x;
+    const dy = toward.y - origin.y;
+    if (Math.abs(dx) < .001 && Math.abs(dy) < .001) return { x: origin.x, y: origin.y };
+    const candidates = [];
+    if (dx > .001) candidates.push((geometry.right - overlap - origin.x) / dx);
+    else if (dx < -.001) candidates.push((geometry.left + overlap - origin.x) / dx);
+    if (dy > .001) candidates.push((geometry.bottom - overlap - origin.y) / dy);
+    else if (dy < -.001) candidates.push((geometry.top + overlap - origin.y) / dy);
+    const positive = candidates.filter((value) => Number.isFinite(value) && value >= 0);
+    const t = positive.length ? Math.min(...positive) : 0;
+    return { x: origin.x + dx * t, y: origin.y + dy * t };
+  }
+
+  function clippedRelationSegment(aId, bId, offset = 0) {
+    const a = markerGeometry(aId);
+    const b = markerGeometry(bId);
+    if (!a || !b) return null;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const nx = -dy / length;
+    const ny = dx / length;
+    const aOrigin = { x: a.x + nx * offset, y: a.y + ny * offset };
+    const bOrigin = { x: b.x + nx * offset, y: b.y + ny * offset };
+    return {
+      a: rayToMarkerEdge(aOrigin, bOrigin, a),
+      b: rayToMarkerEdge(bOrigin, aOrigin, b),
+      aGeometry: a,
+      bGeometry: b
+    };
+  }
+
+  function clippedAimSegment(sourceId, target, offset = 0) {
+    const source = markerGeometry(sourceId);
+    if (!source) return null;
+    const dx = target.x - source.x;
+    const dy = target.y - source.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const nx = -dy / length;
+    const ny = dx / length;
+    const origin = { x: source.x + nx * offset, y: source.y + ny * offset };
+    const shiftedTarget = { x: target.x + nx * offset, y: target.y + ny * offset };
+    return { a: rayToMarkerEdge(origin, shiftedTarget, source), b: shiftedTarget };
+  }
+
   function orthogonalPoints(a, b) {
-    if (Math.abs(a.x - b.x) < 3 || Math.abs(a.y - b.y) < 3) return [a, b];
+    if (Math.abs(a.x - b.x) < 3 || Math.abs(a.y - b.y) < 3) return [{ x:a.x, y:a.y }, { x:b.x, y:b.y }];
     const horizontalFirst = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
     return horizontalFirst
-      ? [a, { x: b.x, y: a.y }, b]
-      : [a, { x: a.x, y: b.y }, b];
+      ? [{ x:a.x, y:a.y }, { x:b.x, y:a.y }, { x:b.x, y:b.y }]
+      : [{ x:a.x, y:a.y }, { x:a.x, y:b.y }, { x:b.x, y:b.y }];
+  }
+
+  function clipGroupPath(points, aGeometry, bGeometry) {
+    const clipped = points.map((point) => ({ x:point.x, y:point.y }));
+    if (clipped.length < 2) return clipped;
+    let firstTarget = clipped[1];
+    for (let index = 1; index < clipped.length; index += 1) {
+      if (Math.hypot(clipped[index].x - aGeometry.x, clipped[index].y - aGeometry.y) > .5) {
+        firstTarget = clipped[index];
+        break;
+      }
+    }
+    let lastTarget = clipped[clipped.length - 2];
+    for (let index = clipped.length - 2; index >= 0; index -= 1) {
+      if (Math.hypot(clipped[index].x - bGeometry.x, clipped[index].y - bGeometry.y) > .5) {
+        lastTarget = clipped[index];
+        break;
+      }
+    }
+    clipped[0] = rayToMarkerEdge({ x:aGeometry.x, y:aGeometry.y }, firstTarget, aGeometry);
+    clipped[clipped.length - 1] = rayToMarkerEdge({ x:bGeometry.x, y:bGeometry.y }, lastTarget, bGeometry);
+    return clipped;
   }
 
   function groupTreeEdges(group) {
     const nodes = (group.markerIds || []).map((id) => {
-      const center = markerCenter(id);
-      const marker = getMarker(id);
-      return center && markerMatchesBoardFilter(marker) ? { id, ...center } : null;
+      const geometry = markerGeometry(id);
+      return geometry ? { id, x:geometry.x, y:geometry.y, geometry } : null;
     }).filter(Boolean);
     if (nodes.length < 2) return [];
     const connected = [nodes.slice().sort((a, b) => a.x - b.x || a.y - b.y)[0]];
@@ -1142,7 +1304,12 @@
         const distance = Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
         if (!best || distance < best.distance) best = { from, to, index, distance };
       }));
-      edges.push({ a: best.from, b: best.to, points: orthogonalPoints(best.from, best.to) });
+      const centerPoints = orthogonalPoints(best.from, best.to);
+      edges.push({
+        a:best.from,
+        b:best.to,
+        points:clipGroupPath(centerPoints, best.from.geometry, best.to.geometry)
+      });
       connected.push(best.to);
       remaining.splice(best.index, 1);
     }
@@ -1197,35 +1364,32 @@
   }
 
   function renderRelations() {
-    const visible = state.relations.filter((relation) => state.relationVisibility?.[relation.type] !== false && markerMatchesBoardFilter(getMarker(relation.a)) && markerMatchesBoardFilter(getMarker(relation.b)));
+    const visible = state.relations.filter((relation) => state.relationVisibility?.[relation.type] !== false);
     let html = renderGroupsSvg();
     visible.forEach((relation) => {
-      const a = markerCenter(relation.a);
-      const b = markerCenter(relation.b);
-      if (!a || !b) return;
-      html += svgLine(a.x, a.y, b.x, b.y, `class="relation-hit" data-relation-id="${esc(relation.id)}"`);
+      const hit = clippedRelationSegment(relation.a, relation.b, 0);
+      if (!hit) return;
+      html += svgLine(hit.a.x, hit.a.y, hit.b.x, hit.b.y, `class="relation-hit" data-relation-id="${esc(relation.id)}"`);
       if (relation.type === 'conflict') {
-        html += svgLine(a.x, a.y, b.x, b.y, 'class="relation-visible" stroke="#e14343" stroke-width="3" stroke-linecap="round"');
+        html += svgLine(hit.a.x, hit.a.y, hit.b.x, hit.b.y, 'class="relation-visible" stroke="#e14343" stroke-width="3" stroke-linecap="round"');
       } else {
-        const top = doubleLinePoints(a, b, 3.2);
-        const bottom = doubleLinePoints(a, b, -3.2);
-        html += svgLine(top[0].x, top[0].y, top[1].x, top[1].y, 'class="relation-visible" stroke="#d9ac32" stroke-width="2.5" stroke-linecap="round"');
-        html += svgLine(bottom[0].x, bottom[0].y, bottom[1].x, bottom[1].y, 'class="relation-visible" stroke="#d9ac32" stroke-width="2.5" stroke-linecap="round"');
+        const top = clippedRelationSegment(relation.a, relation.b, 3.2);
+        const bottom = clippedRelationSegment(relation.a, relation.b, -3.2);
+        if (top) html += svgLine(top.a.x, top.a.y, top.b.x, top.b.y, 'class="relation-visible" stroke="#d9ac32" stroke-width="2.5" stroke-linecap="round"');
+        if (bottom) html += svgLine(bottom.a.x, bottom.a.y, bottom.b.x, bottom.b.y, 'class="relation-visible" stroke="#d9ac32" stroke-width="2.5" stroke-linecap="round"');
       }
     });
     if (aim) {
-      const source = markerCenter(aim.sourceId);
       const boardRect = board.getBoundingClientRect();
       const target = { x: aim.x - boardRect.left, y: aim.y - boardRect.top };
-      if (source) {
-        if (aim.type === 'conflict') {
-          html += svgLine(source.x, source.y, target.x, target.y, 'stroke="#e14343" stroke-width="3" stroke-linecap="round" stroke-dasharray="9 5"');
-        } else {
-          const one = doubleLinePoints(source, target, 3.2);
-          const two = doubleLinePoints(source, target, -3.2);
-          html += svgLine(one[0].x, one[0].y, one[1].x, one[1].y, 'stroke="#d9ac32" stroke-width="2.5" stroke-linecap="round"');
-          html += svgLine(two[0].x, two[0].y, two[1].x, two[1].y, 'stroke="#d9ac32" stroke-width="2.5" stroke-linecap="round"');
-        }
+      if (aim.type === 'conflict') {
+        const segment = clippedAimSegment(aim.sourceId, target, 0);
+        if (segment) html += svgLine(segment.a.x, segment.a.y, segment.b.x, segment.b.y, 'stroke="#e14343" stroke-width="3" stroke-linecap="round" stroke-dasharray="9 5"');
+      } else {
+        const one = clippedAimSegment(aim.sourceId, target, 3.2);
+        const two = clippedAimSegment(aim.sourceId, target, -3.2);
+        if (one) html += svgLine(one.a.x, one.a.y, one.b.x, one.b.y, 'stroke="#d9ac32" stroke-width="2.5" stroke-linecap="round"');
+        if (two) html += svgLine(two.a.x, two.a.y, two.b.x, two.b.y, 'stroke="#d9ac32" stroke-width="2.5" stroke-linecap="round"');
       }
     }
     relationLayer.innerHTML = html;
@@ -1330,6 +1494,11 @@
       createMarkerGroup('gatekeeper');
       return;
     }
+    if (!editing && selectedMarkerIds.size >= 1 && event.key === 'ArrowDown') {
+      event.preventDefault();
+      toggleSecondPhaseSelection();
+      return;
+    }
     if (event.key === 'Escape') {
       if (aim) cancelAim();
       closeRelationMenu();
@@ -1358,7 +1527,7 @@
       title: document.getElementById('marker-title').value.trim(),
       description: document.getElementById('marker-description').value.trim(),
       tier: null, x: .5, y: .5, gridCol: null, gridRow: null, layoutOrder: 0,
-      sourceConstraintId: null,
+      sourceConstraintId: null, isSecondPhase: false,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
     };
     if (!marker.label || !marker.title || !marker.description) return;
@@ -1487,7 +1656,7 @@
     const marker = {
       id: uid('constraint'), category: item.category, label: item.label.slice(0, 18), title: item.label,
       description: `${item.feature}\n${item.description}\n예상 영향: ${item.impact}`,
-      tier: null, x: .5, y: .5, gridCol: null, gridRow: null, layoutOrder: 0, sourceConstraintId: item.id,
+      tier: null, x: .5, y: .5, gridCol: null, gridRow: null, layoutOrder: 0, sourceConstraintId: item.id, isSecondPhase: false,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
     };
     state.markers.push(marker);
@@ -1502,7 +1671,6 @@
     scheduleSave();
   });
 
-  clearSelectionButton.addEventListener('click', clearMarkerSelection);
   board.addEventListener('pointerdown', (event) => {
     if (!event.target.closest('[data-marker-id]') && !event.shiftKey) clearMarkerSelection();
   });
@@ -1568,6 +1736,8 @@
   function syncRelationVisibilityControls() {
     conflictToggle.checked = state.relationVisibility?.conflict !== false;
     synergyToggle.checked = state.relationVisibility?.synergy !== false;
+    if (secondPhaseToggle) secondPhaseToggle.checked = state.secondPhaseIncluded !== false;
+    if (secondPhaseToggleLabel) secondPhaseToggleLabel.textContent = state.secondPhaseIncluded !== false ? '제약 포함' : '제약 미포함';
   }
 
   document.querySelectorAll('[data-board-category-filter]').forEach((button) => button.addEventListener('click', () => {
@@ -1594,6 +1764,15 @@
     state.relationVisibility.synergy = synergyToggle.checked;
     renderRelations();
     scheduleSave();
+  });
+
+  secondPhaseToggle?.addEventListener('change', () => {
+    state.secondPhaseIncluded = secondPhaseToggle.checked;
+    if (secondPhaseToggleLabel) secondPhaseToggleLabel.textContent = state.secondPhaseIncluded ? '제약 포함' : '제약 미포함';
+    pruneInvalidScoreSelections();
+    renderMarkers();
+    scheduleSave();
+    showToast(state.secondPhaseIncluded ? '2차 업데이트 제약을 포함해 표시합니다.' : '2차 업데이트 제약을 미포함 상태로 표시합니다.');
   });
 
   function nextVersionName() {
@@ -1636,7 +1815,7 @@
       return `<article class="version-card ${compareSelection.includes(version.id) ? 'compare-selected' : ''}" data-version-id="${esc(version.id)}">
         <header><h3>${esc(version.name)}</h3><time datetime="${esc(version.createdAt)}">${formatDate(version.createdAt)}</time></header>
         <p>${esc(version.memo || '변경 메모 없음')}</p>
-        <div class="version-summary"><span>제약 ${version.snapshot.markers.length}개</span><span>배치 ${version.snapshot.markers.filter((marker) => marker.tier != null).length}개</span><span>충돌 ${counts.conflict}</span><span>시너지 ${counts.synergy}</span><span>묶음 ${counts.normalGroup}</span><span>문지기 ${counts.gatekeeperGroup}</span></div>
+        <div class="version-summary"><span>제약 ${version.snapshot.markers.length}개</span><span>배치 ${version.snapshot.markers.filter((marker) => marker.tier != null).length}개</span><span>충돌 ${counts.conflict}</span><span>시너지 ${counts.synergy}</span><span>묶음 ${counts.normalGroup}</span><span>문지기 ${counts.gatekeeperGroup}</span><span>2차 ${version.snapshot.markers.filter((marker) => marker.isSecondPhase).length}</span></div>
         <div class="version-actions">
           <button type="button" data-preview-version="${esc(version.id)}">미리보기</button>
           <button type="button" data-load-version="${esc(version.id)}">현재 작업판으로 불러오기</button>
@@ -1667,7 +1846,7 @@
     if (!version) return;
     const counts = relationCounts(version.snapshot);
     document.getElementById('preview-title').textContent = version.name;
-    document.getElementById('preview-content').innerHTML = `<div class="preview-meta"><span>${formatDate(version.createdAt)}</span><span>제약 ${version.snapshot.markers.length}개</span><span>충돌 ${counts.conflict}</span><span>시너지 ${counts.synergy}</span><span>묶음 ${counts.normalGroup}</span><span>문지기 ${counts.gatekeeperGroup}</span></div><p class="preview-memo">${esc(version.memo || '변경 메모 없음')}</p>${miniBoard(version.snapshot)}`;
+    document.getElementById('preview-content').innerHTML = `<div class="preview-meta"><span>${formatDate(version.createdAt)}</span><span>제약 ${version.snapshot.markers.length}개</span><span>충돌 ${counts.conflict}</span><span>시너지 ${counts.synergy}</span><span>묶음 ${counts.normalGroup}</span><span>문지기 ${counts.gatekeeperGroup}</span><span>2차 ${version.snapshot.markers.filter((marker) => marker.isSecondPhase).length}</span></div><p class="preview-memo">${esc(version.memo || '변경 메모 없음')}</p>${miniBoard(version.snapshot)}`;
     openModal('preview-modal');
   }
 
@@ -1752,6 +1931,7 @@
       const parts = [];
       if (old.tier !== marker.tier) parts.push(`${old.tier == null ? '미배치' : `${old.tier}점`} → ${marker.tier == null ? '미배치' : `${marker.tier}점`}`);
       if (old.category !== marker.category) parts.push(`카테고리 ${old.category} → ${marker.category}`);
+      if (Boolean(old.isSecondPhase) !== Boolean(marker.isSecondPhase)) parts.push(marker.isSecondPhase ? '2차 제약 지정' : '2차 제약 해제');
       if (old.label !== marker.label || old.title !== marker.title || old.description !== marker.description) parts.push('텍스트 수정');
       if (old.tier === marker.tier && marker.tier != null && (Math.abs(old.x - marker.x) > .015 || Math.abs(old.y - marker.y) > .015)) parts.push('위치 이동');
       if (parts.length) changed.push(`${marker.title}: ${parts.join(', ')}`);
@@ -1793,11 +1973,25 @@
     setAutosave('saved', '자동 저장 완료');
   }
 
-  window.addEventListener('resize', () => requestAnimationFrame(renderRelations));
+  window.addEventListener('resize', () => requestAnimationFrame(() => {
+    syncBoardControlAlignment();
+    syncManagementPanelAlignment();
+    renderRelations();
+  }));
   document.getElementById('constraint-board-scroll').addEventListener('scroll', () => {
     hideTooltip();
     closeRelationMenu();
   });
 
+  setupCollapsiblePanels();
+  if (window.ResizeObserver) {
+    const description = document.getElementById('marker-description');
+    if (description) new ResizeObserver(() => requestAnimationFrame(syncManagementPanelAlignment)).observe(description);
+  }
+  if (document.fonts?.ready) document.fonts.ready.then(() => requestAnimationFrame(() => {
+    syncBoardControlAlignment();
+    syncManagementPanelAlignment();
+    renderRelations();
+  }));
   renderAll();
 })();

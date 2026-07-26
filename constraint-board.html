@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="제약 마크를 1·2·3점 현황판에 배치하고 충돌·시너지 관계와 버전별 설계 기록을 관리하는 Endfield Balance Lab 제약 설계 페이지">
+  <meta name="description" content="제약 마크를 위기 협약 제약 설계 현황판에 배치하고 충돌·시너지 관계와 버전별 설계 기록을 관리하는 Endfield Balance Lab 제약 설계 페이지">
   <title>제약 설계 | Endfield Balance Lab</title>
   <link rel="stylesheet" href="styles.css?v=68">
-  <link rel="stylesheet" href="constraint-board.css?v=77">
+  <link rel="stylesheet" href="constraint-board.css?v=82">
 </head>
 <body>
   <header class="app-topbar">
@@ -34,7 +34,7 @@
       <div>
         <span>CONSTRAINT DESIGN BOARD</span>
         <h1>제약 설계 현황판</h1>
-        <p>제약 마크를 직접 만들고 1·2·3점 구역에 붙여가며 설계합니다. 길게 눌러 충돌을, 빠르게 세 번 눌러 시너지를 연결할 수 있습니다.</p>
+        <p>제약 마크를 직접 만들고 1·2·3점 구역에 붙여가며 설계합니다.</p>
       </div>
       <div class="designer-heading-actions">
         <div id="autosave-status" class="autosave-status" role="status"><i></i><span>자동 저장 준비</span></div>
@@ -44,12 +44,13 @@
 
     <section class="board-card" aria-labelledby="board-title">
       <div class="board-card-heading">
-        <div class="board-title-block"><small>MAGNETIC CONSTRAINT BOARD</small><div class="board-title-line"><h2 id="board-title">1·2·3점 현황판</h2><div id="score-selection-total" class="score-selection-total" title="현황판의 제약 마크를 더블클릭하면 선택 제약 총점에 포함됩니다."><span>선택 제약 총점</span><strong id="score-selection-value">0점</strong></div></div></div>
+        <div class="board-title-block"><small>MAGNETIC CONSTRAINT BOARD</small><div class="board-title-line"><h2 id="board-title">위기 협약 제약 설계</h2><div id="score-selection-total" class="score-selection-total" title="현황판의 제약 마크를 더블클릭하면 선택 제약 총점에 포함됩니다."><span>선택 제약 총점</span><strong id="score-selection-value">0점</strong></div></div></div>
         <div class="board-heading-tools">
           <button id="open-placement-modal" class="board-place-button" type="button" aria-controls="placement-drawer" aria-expanded="false">미배치 제약 열기</button>
           <div class="relation-visibility" aria-label="관계선 표시 설정">
             <label class="relation-switch conflict-switch"><input id="toggle-conflict-lines" type="checkbox" checked><span></span><b><i class="legend-line conflict"></i>충돌선</b></label>
             <label class="relation-switch synergy-switch"><input id="toggle-synergy-lines" type="checkbox" checked><span></span><b><i class="legend-line synergy"></i>시너지선</b></label>
+            <label class="relation-switch second-phase-switch"><input id="toggle-second-phase" type="checkbox" checked><span></span><b><i class="second-phase-legend">2차</i><em id="second-phase-toggle-label">제약 포함</em></b></label>
           </div>
         </div>
       </div>
@@ -77,7 +78,7 @@
         </div>
       </div>
       <div id="board-drop-hint" class="board-instruction">
-        <span>드래그: 배치·이동</span><span>빠르게 두 번 누르기: 총점 포함/제외</span><span>SHIFT+클릭: 여러 마크 선택</span><span>선택 마크 드래그: 점수 줄 유지·가로 이동</span><span>ENTER: 일반 묶음</span><span>↑ 방향키: 문지기 묶음</span><span>아래로 끌기: 현황판에서 제거</span><span>길게 누르기: 충돌 연결</span><span>빠르게 세 번 누르기: 시너지 연결</span><button id="clear-marker-selection" class="selection-clear-button" type="button" hidden>선택 해제</button><strong id="marker-selection-status" class="marker-selection-status" aria-live="polite" hidden>선택 없음</strong>
+        <span>드래그: 배치·이동</span><span>빠르게 두 번 누르기: 총점 포함/제외</span><span>SHIFT+클릭: 여러 마크 선택</span><span>선택 마크 드래그: 점수 줄 유지·가로 이동</span><span>ENTER: 일반 묶음</span><span>↑ 방향키: 문지기 묶음</span><span>↓ 방향키: 2차 제약 지정/해제</span><span>아래로 끌기: 현황판에서 제거</span><span>길게 누르기: 충돌 연결</span><span>빠르게 세 번 누르기: 시너지 연결</span><strong id="marker-selection-status" class="marker-selection-status" aria-live="polite" hidden>선택 없음</strong>
       </div>
     </section>
 
@@ -99,20 +100,28 @@
       </section>
     </div>
 
-    <section class="work-panel recommendation-work-panel full-width-panel" aria-labelledby="recommendation-title">
-      <header class="work-panel-heading"><div><small>PARTY ANALYSIS RECOMMENDATION</small><h2 id="recommendation-title">분석 기반 제약 추천</h2></div><span id="analysis-count" class="panel-count">0개 분석</span></header>
-      <div class="recommendation-toolbar">
-        <label class="board-search"><span>⌕</span><input id="recommendation-search" type="search" placeholder="제약명·내용·근거 검색"></label>
-        <div id="recommendation-filters" class="recommendation-filters" role="group" aria-label="추천 제약 카테고리 필터">
-          <button type="button" class="active" data-category="all">전체</button><button type="button" data-category="팀">팀</button><button type="button" data-category="조작">조작</button><button type="button" data-category="환경">환경</button>
+    <section class="work-panel recommendation-work-panel full-width-panel collapsible-work-panel is-collapsed" aria-labelledby="recommendation-title">
+      <header class="work-panel-heading collapsible-panel-heading">
+        <div><small>PARTY ANALYSIS RECOMMENDATION</small><h2 id="recommendation-title">분석 기반 제약 추천</h2></div>
+        <div class="panel-heading-actions"><span id="analysis-count" class="panel-count">0개 분석</span><button class="panel-collapse-toggle" type="button" data-collapse-panel="recommendation-panel-content" data-collapse-label="제약 추천" aria-expanded="false" aria-controls="recommendation-panel-content"><span>제약 추천 펼치기</span><i aria-hidden="true"></i></button></div>
+      </header>
+      <div id="recommendation-panel-content" class="collapsible-panel-content" hidden>
+        <div class="recommendation-toolbar">
+          <label class="board-search"><span>⌕</span><input id="recommendation-search" type="search" placeholder="제약명·내용·근거 검색"></label>
+          <div id="recommendation-filters" class="recommendation-filters" role="group" aria-label="추천 제약 카테고리 필터">
+            <button type="button" class="active" data-category="all">전체</button><button type="button" data-category="팀">팀</button><button type="button" data-category="조작">조작</button><button type="button" data-category="환경">환경</button>
+          </div>
         </div>
+        <div id="recommendation-list" class="recommendation-list"></div>
       </div>
-      <div id="recommendation-list" class="recommendation-list"></div>
     </section>
 
-    <section class="work-panel version-panel" aria-labelledby="version-title">
-      <header class="work-panel-heading"><div><small>DESIGN HISTORY</small><h2 id="version-title">버전 기록</h2><p>현재 작업판은 브라우저에 자동 저장되며, 아래 기록은 직접 남긴 고정 스냅샷입니다.</p></div><span id="version-count" class="panel-count">0개 버전</span></header>
-      <div id="version-list" class="version-list"></div>
+    <section class="work-panel version-panel collapsible-work-panel is-collapsed" aria-labelledby="version-title">
+      <header class="work-panel-heading collapsible-panel-heading">
+        <div><small>DESIGN HISTORY</small><h2 id="version-title">버전 기록</h2><p>현재 작업판은 브라우저에 자동 저장되며, 아래 기록은 직접 남긴 고정 스냅샷입니다.</p></div>
+        <div class="panel-heading-actions"><span id="version-count" class="panel-count">0개 버전</span><button class="panel-collapse-toggle" type="button" data-collapse-panel="version-panel-content" data-collapse-label="버전 기록" aria-expanded="false" aria-controls="version-panel-content"><span>버전 기록 펼치기</span><i aria-hidden="true"></i></button></div>
+      </header>
+      <div id="version-panel-content" class="collapsible-panel-content" hidden><div id="version-list" class="version-list"></div></div>
     </section>
   </main>
 
@@ -163,6 +172,6 @@
   <script src="saved-analyses.js?v=64"></script>
   <script src="analysis-store.js?v=63"></script>
   <script src="constraint-data.js?v=74"></script>
-  <script src="constraint-board.js?v=77"></script>
+  <script src="constraint-board.js?v=82"></script>
 </body>
 </html>
