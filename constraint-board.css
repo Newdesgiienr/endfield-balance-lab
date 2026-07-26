@@ -1252,3 +1252,17 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
   background: rgba(8,11,15,.92);
   pointer-events: none;
 }
+
+
+/* v91: use the reference dark navy badge color at the original pill size in conflict state. */
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-category,
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-phase-badge {
+  background: #151617 !important;
+  color: rgba(255,255,255,.5);
+  filter: none;
+  opacity: 1;
+}
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-category::before,
+.board-marker.is-score-blocked:not(.is-score-selected) .marker-badge-row .marker-phase-badge::before {
+  display: none;
+}
