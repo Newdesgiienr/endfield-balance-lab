@@ -1319,3 +1319,22 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
 .constraint-board {
   transition: none;
 }
+
+
+/* v97: emphasize bracketed values with the score-total card's red gradient. */
+.numeric-token {
+  color: #f05663;
+  background: linear-gradient(135deg, #ff6c73 0%, #f05663 55%, #e6475a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 10px rgba(240, 86, 99, .18);
+}
+@media (forced-colors: active) {
+  .numeric-token {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: Highlight;
+    text-shadow: none;
+  }
+}
