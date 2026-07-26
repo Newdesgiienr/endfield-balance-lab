@@ -1479,3 +1479,6 @@ body.placement-drawer-dragging {
 .board-marker .marker-badge-row .marker-phase-badge {
   position: relative;
 }
+
+
+/* v104: relationship endpoints and masks include each visible phase/category badge. */

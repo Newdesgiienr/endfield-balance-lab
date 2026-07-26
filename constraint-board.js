@@ -1473,17 +1473,46 @@
     const rect = element.getBoundingClientRect();
     const left = rect.left - boardRect.left;
     const top = rect.top - boardRect.top;
-    return {
-      id,
-      element,
+    const bodyRect = {
       left,
       top,
       right: left + rect.width,
       bottom: top + rect.height,
       width: rect.width,
       height: rect.height,
-      x: left + rect.width / 2,
-      y: top + rect.height / 2
+      radius: Math.max(0, parseFloat(window.getComputedStyle(element).borderTopLeftRadius) || 12),
+      type: 'body'
+    };
+    const badgeRects = Array.from(element.querySelectorAll('.marker-badge-row .marker-category, .marker-badge-row .marker-phase-badge'))
+      .map((badge) => {
+        const badgeRect = badge.getBoundingClientRect();
+        if (badgeRect.width < 1 || badgeRect.height < 1) return null;
+        return {
+          left: badgeRect.left - boardRect.left,
+          top: badgeRect.top - boardRect.top,
+          right: badgeRect.right - boardRect.left,
+          bottom: badgeRect.bottom - boardRect.top,
+          width: badgeRect.width,
+          height: badgeRect.height,
+          radius: Math.max(0, parseFloat(window.getComputedStyle(badge).borderTopLeftRadius) || badgeRect.height / 2),
+          type: 'badge'
+        };
+      })
+      .filter(Boolean);
+    return {
+      id,
+      element,
+      left: bodyRect.left,
+      top: bodyRect.top,
+      right: bodyRect.right,
+      bottom: bodyRect.bottom,
+      width: bodyRect.width,
+      height: bodyRect.height,
+      x: bodyRect.left + bodyRect.width / 2,
+      y: bodyRect.top + bodyRect.height / 2,
+      bodyRect,
+      badgeRects,
+      shapeRects: [bodyRect, ...badgeRects]
     };
   }
 
@@ -1515,29 +1544,62 @@
     let cutouts = '';
 
     board.querySelectorAll('.board-marker').forEach((element) => {
-      const rect = element.getBoundingClientRect();
-      if (rect.width < 1 || rect.height < 1) return;
-      const style = window.getComputedStyle(element);
-      const radius = Math.max(0, parseFloat(style.borderTopLeftRadius) || 12);
-      const x = rect.left - boardRect.left;
-      const y = rect.top - boardRect.top;
-      cutouts += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${rect.width.toFixed(2)}" height="${rect.height.toFixed(2)}" rx="${radius.toFixed(2)}" ry="${radius.toFixed(2)}" fill="#000"></rect>`;
+      const markerId = element.dataset.markerId;
+      const geometry = markerId ? markerGeometry(markerId) : null;
+      if (!geometry) return;
+      geometry.shapeRects.forEach((shape) => {
+        cutouts += `<rect x="${shape.left.toFixed(2)}" y="${shape.top.toFixed(2)}" width="${shape.width.toFixed(2)}" height="${shape.height.toFixed(2)}" rx="${shape.radius.toFixed(2)}" ry="${shape.radius.toFixed(2)}" fill="#000"></rect>`;
+      });
     });
 
     return `<defs><mask id="relation-marker-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="${width.toFixed(2)}" height="${height.toFixed(2)}" style="mask-type:luminance"><rect x="0" y="0" width="${width.toFixed(2)}" height="${height.toFixed(2)}" fill="#fff"></rect>${cutouts}</mask></defs>`;
   }
 
+  function rayRectInterval(origin, direction, rect) {
+    let start = -Infinity;
+    let end = Infinity;
+    const axes = [
+      { origin: origin.x, delta: direction.x, min: rect.left, max: rect.right },
+      { origin: origin.y, delta: direction.y, min: rect.top, max: rect.bottom }
+    ];
+    for (const axis of axes) {
+      if (Math.abs(axis.delta) < .0001) {
+        if (axis.origin < axis.min || axis.origin > axis.max) return null;
+        continue;
+      }
+      const one = (axis.min - axis.origin) / axis.delta;
+      const two = (axis.max - axis.origin) / axis.delta;
+      start = Math.max(start, Math.min(one, two));
+      end = Math.min(end, Math.max(one, two));
+      if (end < start) return null;
+    }
+    return { start, end };
+  }
+
   function rayToMarkerEdge(origin, toward, geometry, overlap = 1.25) {
     const dx = toward.x - origin.x;
     const dy = toward.y - origin.y;
-    if (Math.abs(dx) < .001 && Math.abs(dy) < .001) return { x: origin.x, y: origin.y };
-    const candidates = [];
-    if (dx > .001) candidates.push((geometry.right - overlap - origin.x) / dx);
-    else if (dx < -.001) candidates.push((geometry.left + overlap - origin.x) / dx);
-    if (dy > .001) candidates.push((geometry.bottom - overlap - origin.y) / dy);
-    else if (dy < -.001) candidates.push((geometry.top + overlap - origin.y) / dy);
-    const positive = candidates.filter((value) => Number.isFinite(value) && value >= 0);
-    const t = positive.length ? Math.min(...positive) : 0;
+    const length = Math.hypot(dx, dy);
+    if (length < .001) return { x: origin.x, y: origin.y };
+    const direction = { x: dx, y: dy };
+    const intervals = (geometry.shapeRects || [geometry])
+      .map((rect) => rayRectInterval(origin, direction, rect))
+      .filter((interval) => interval && interval.end >= -.0001)
+      .sort((a, b) => a.start - b.start);
+    const containingOrigin = intervals.filter((interval) => interval.start <= .0001 && interval.end >= -.0001);
+    if (!containingOrigin.length) return { x: origin.x, y: origin.y };
+    let exit = Math.max(...containingOrigin.map((interval) => interval.end));
+    let extended = true;
+    while (extended) {
+      extended = false;
+      intervals.forEach((interval) => {
+        if (interval.start <= exit + .001 && interval.end > exit) {
+          exit = interval.end;
+          extended = true;
+        }
+      });
+    }
+    const t = Math.max(0, exit - overlap / length);
     return { x: origin.x + dx * t, y: origin.y + dy * t };
   }
 
