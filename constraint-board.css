@@ -1516,3 +1516,12 @@ body.placement-drawer-dragging {
 .tray-category-grid .tray-marker .marker-badge-row {
   gap: 5px;
 }
+
+
+/* v106: vertically and horizontally center the category text in storage-view pills. */
+.tray-category-grid .tray-marker .marker-badge-row .marker-category {
+  display: inline-grid;
+  place-items: center;
+  line-height: normal;
+  text-align: center;
+}
