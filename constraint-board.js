@@ -1213,6 +1213,30 @@
     return `<path d="${commands.join(' ')}" ${attrs}></path>`;
   }
 
+  /*
+   * Keep every relationship line behind marker cards, even when a marker is
+   * dimmed or semi-transparent. The SVG mask cuts the line layer out of every
+   * occupied marker rectangle while leaving the marker DOM itself untouched.
+   */
+  function relationMarkerMaskMarkup() {
+    const boardRect = board.getBoundingClientRect();
+    const width = Math.max(1, boardRect.width);
+    const height = Math.max(1, boardRect.height);
+    let cutouts = '';
+
+    board.querySelectorAll('.board-marker').forEach((element) => {
+      const rect = element.getBoundingClientRect();
+      if (rect.width < 1 || rect.height < 1) return;
+      const style = window.getComputedStyle(element);
+      const radius = Math.max(0, parseFloat(style.borderTopLeftRadius) || 12);
+      const x = rect.left - boardRect.left;
+      const y = rect.top - boardRect.top;
+      cutouts += `<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${rect.width.toFixed(2)}" height="${rect.height.toFixed(2)}" rx="${radius.toFixed(2)}" ry="${radius.toFixed(2)}" fill="#000"></rect>`;
+    });
+
+    return `<defs><mask id="relation-marker-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="${width.toFixed(2)}" height="${height.toFixed(2)}" style="mask-type:luminance"><rect x="0" y="0" width="${width.toFixed(2)}" height="${height.toFixed(2)}" fill="#fff"></rect>${cutouts}</mask></defs>`;
+  }
+
   function rayToMarkerEdge(origin, toward, geometry, overlap = 1.25) {
     const dx = toward.x - origin.x;
     const dy = toward.y - origin.y;
@@ -1392,7 +1416,7 @@
         if (two) html += svgLine(two.a.x, two.a.y, two.b.x, two.b.y, 'stroke="#d9ac32" stroke-width="2.5" stroke-linecap="round"');
       }
     }
-    relationLayer.innerHTML = html;
+    relationLayer.innerHTML = `${relationMarkerMaskMarkup()}<g class="relation-masked-content" mask="url(#relation-marker-mask)">${html}</g>`;
     relationLayer.querySelectorAll('[data-relation-id]').forEach((line) => line.addEventListener('click', (event) => {
       event.stopPropagation();
       openRelationMenu(line.dataset.relationId, event.clientX, event.clientY);
