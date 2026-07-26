@@ -48,6 +48,7 @@
   const scoreSelectedMarkerIds = new Set();
   let pendingScoreSelectionTimer = null;
   let pendingScoreSelectionId = null;
+  let pendingScoreSelectionSnapshot = null;
   let suppressScoreClickUntil = 0;
   let boardCategoryFilter = 'all';
   let boardScoreFilter = 'all';
@@ -515,6 +516,14 @@
     window.clearTimeout(pendingScoreSelectionTimer);
     pendingScoreSelectionTimer = null;
     pendingScoreSelectionId = null;
+    pendingScoreSelectionSnapshot = null;
+  }
+
+  function restorePendingScoreSelection() {
+    if (!Array.isArray(pendingScoreSelectionSnapshot)) return;
+    scoreSelectedMarkerIds.clear();
+    pendingScoreSelectionSnapshot.forEach((id) => scoreSelectedMarkerIds.add(id));
+    updateScoreSelectionUi();
   }
 
   function conflictingSelectedMarker(markerId, selectedIds = scoreSelectedMarkerIds) {
@@ -938,23 +947,29 @@
 
     if (event.detail >= 3) {
       event.preventDefault();
+      if (pendingScoreSelectionId === marker.id) restorePendingScoreSelection();
       cancelPendingScoreSelection();
+      element.classList.remove('score-select-flash');
       suppressScoreClickUntil = performance.now() + 420;
       beginAim('synergy', marker.id, event.clientX, event.clientY, false);
       showToast('시너지 연결 모드: 연결할 다른 제약 마크를 클릭하세요.');
       return;
     }
 
-    // Delay the normal click just enough to preserve the existing rapid triple-click synergy gesture.
-    // A double click is treated as one normal score toggle; a third click cancels it and starts synergy.
+    // Apply the first click immediately so score selection never feels delayed.
+    // A second rapid click keeps that result; a third restores the pre-click score state and starts synergy.
+    if (event.detail === 2 && pendingScoreSelectionId === marker.id) {
+      event.preventDefault();
+      window.clearTimeout(pendingScoreSelectionTimer);
+      pendingScoreSelectionTimer = window.setTimeout(cancelPendingScoreSelection, 460);
+      return;
+    }
+
     cancelPendingScoreSelection();
     pendingScoreSelectionId = marker.id;
-    pendingScoreSelectionTimer = window.setTimeout(() => {
-      const id = pendingScoreSelectionId;
-      pendingScoreSelectionTimer = null;
-      pendingScoreSelectionId = null;
-      if (id) toggleScoreSelection(id);
-    }, 330);
+    pendingScoreSelectionSnapshot = [...scoreSelectedMarkerIds];
+    toggleScoreSelection(marker.id);
+    pendingScoreSelectionTimer = window.setTimeout(cancelPendingScoreSelection, 460);
   }
 
   function onGlobalPointerMove(event) {

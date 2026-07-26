@@ -1080,8 +1080,8 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
   z-index: 6;
   border: 1px dashed rgba(255,255,255,.34);
   border-radius: inherit;
-  background: rgba(8,11,15,.61);
-  backdrop-filter: grayscale(1) brightness(.58);
+  background: rgba(8,11,15,.34);
+  backdrop-filter: grayscale(1) brightness(.76);
   pointer-events: none;
 }
 .board-marker.is-score-blocked.is-board-filter-dimmed:not(.is-score-selected) {
@@ -1089,8 +1089,8 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
   filter: none;
 }
 .board-marker.is-score-blocked.is-board-filter-dimmed:not(.is-score-selected)::before {
-  background: rgba(8,11,15,.73);
-  backdrop-filter: grayscale(1) brightness(.48);
+  background: rgba(8,11,15,.46);
+  backdrop-filter: grayscale(1) brightness(.66);
 }
 
 .score-conflict-overlay {
@@ -1132,4 +1132,15 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
 
 @media (prefers-reduced-motion: reduce) {
   .board-marker.score-select-flash { animation-duration: .01ms; }
+}
+
+
+/* v86: lighter conflict veil and immediate score-click feedback. */
+.board-marker.is-score-blocked:not(.is-score-selected)::before {
+  background: rgba(8,11,15,.34);
+  backdrop-filter: grayscale(1) brightness(.76);
+}
+.board-marker.is-score-blocked.is-board-filter-dimmed:not(.is-score-selected)::before {
+  background: rgba(8,11,15,.46);
+  backdrop-filter: grayscale(1) brightness(.66);
 }
