@@ -1313,3 +1313,9 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
 .version-panel.is-collapsed > .work-panel-heading {
   min-height: 88px;
 }
+
+
+/* v96: keep the expandable board width stable so relation coordinates never lag behind after reload. */
+.constraint-board {
+  transition: none;
+}

@@ -376,7 +376,7 @@
     requestAnimationFrame(() => {
       syncBoardControlAlignment();
       syncManagementPanelAlignment();
-      renderRelations();
+      renderRelationsAfterSettledLayout();
     });
   }
 
@@ -1651,6 +1651,22 @@
     return html;
   }
 
+  let settledRelationFrame = 0;
+  let settledRelationFrameTwo = 0;
+
+  function renderRelationsAfterSettledLayout() {
+    window.cancelAnimationFrame(settledRelationFrame);
+    window.cancelAnimationFrame(settledRelationFrameTwo);
+    settledRelationFrame = window.requestAnimationFrame(() => {
+      syncBoardGeometry();
+      // Force the new expandable-board width to be committed before measuring markers.
+      void board.offsetWidth;
+      settledRelationFrameTwo = window.requestAnimationFrame(() => {
+        renderRelations();
+      });
+    });
+  }
+
   function renderRelations() {
     const visible = state.relations.filter((relation) => state.relationVisibility?.[relation.type] !== false);
     let html = renderGroupsSvg();
@@ -2263,7 +2279,7 @@
     syncBoardGeometry();
     syncBoardControlAlignment();
     syncManagementPanelAlignment();
-    renderRelations();
+    renderRelationsAfterSettledLayout();
   }));
   document.getElementById('constraint-board-scroll').addEventListener('scroll', () => {
     hideTooltip();
@@ -2274,11 +2290,12 @@
   if (window.ResizeObserver) {
     const description = document.getElementById('marker-description');
     if (description) new ResizeObserver(() => requestAnimationFrame(syncManagementPanelAlignment)).observe(description);
+    new ResizeObserver(() => renderRelationsAfterSettledLayout()).observe(board);
   }
   if (document.fonts?.ready) document.fonts.ready.then(() => requestAnimationFrame(() => {
     syncBoardControlAlignment();
     syncManagementPanelAlignment();
-    renderRelations();
+    renderRelationsAfterSettledLayout();
   }));
   renderAll();
 })();
