@@ -526,13 +526,18 @@
     updateScoreSelectionUi();
   }
 
+  function conflictingSelectedMarkerIds(markerId, selectedIds = scoreSelectedMarkerIds) {
+    return [...new Set(state.relations
+      .filter((item) => item.type === 'conflict' && (
+        (item.a === markerId && selectedIds.has(item.b)) ||
+        (item.b === markerId && selectedIds.has(item.a))
+      ))
+      .map((item) => item.a === markerId ? item.b : item.a))];
+  }
+
   function conflictingSelectedMarker(markerId, selectedIds = scoreSelectedMarkerIds) {
-    const relation = state.relations.find((item) => item.type === 'conflict' && (
-      (item.a === markerId && selectedIds.has(item.b)) ||
-      (item.b === markerId && selectedIds.has(item.a))
-    ));
-    if (!relation) return null;
-    return getMarker(relation.a === markerId ? relation.b : relation.a);
+    const conflictingId = conflictingSelectedMarkerIds(markerId, selectedIds)[0];
+    return conflictingId ? getMarker(conflictingId) : null;
   }
 
   function placedGroupMarkers(group) {
@@ -596,12 +601,13 @@
       const selected = scoreSelectedMarkerIds.has(element.dataset.markerId);
       const conflict = marker && !selected ? conflictingSelectedMarker(marker.id) : null;
       const reason = marker && !selected ? scoreBlockReason(marker) : '';
+      const hardBlocked = Boolean(reason && !conflict);
       element.classList.toggle('is-score-selected', selected);
       element.classList.toggle('is-score-blocked', Boolean(reason));
       element.classList.toggle('is-conflict-blocked', Boolean(conflict));
       element.dataset.scoreSelected = String(selected);
       element.dataset.scoreBlockedReason = reason;
-      element.setAttribute('aria-disabled', String(Boolean(reason)));
+      element.setAttribute('aria-disabled', String(hardBlocked));
     });
     const selected = [...scoreSelectedMarkerIds].map(getMarker).filter((marker) => marker && marker.tier != null);
     const total = selected.reduce((sum, marker) => sum + Number(marker.tier || 0), 0);
@@ -633,6 +639,28 @@
       if (removed > 0) showToast(`문지기 선택이 해제되어 오른쪽 제약 ${removed}개도 총점에서 제외했습니다.`);
       return;
     }
+
+    // A conflict-blocked marker remains clickable. The most recently clicked
+    // marker takes priority, so directly conflicting selections are replaced.
+    const conflictingIds = conflictingSelectedMarkerIds(marker.id);
+    if (conflictingIds.length) {
+      const snapshot = [...scoreSelectedMarkerIds];
+      conflictingIds.forEach((conflictingId) => scoreSelectedMarkerIds.delete(conflictingId));
+      const remainingReason = scoreBlockReason(marker);
+      if (remainingReason) {
+        scoreSelectedMarkerIds.clear();
+        snapshot.forEach((selectedId) => scoreSelectedMarkerIds.add(selectedId));
+        updateScoreSelectionUi();
+        showToast(remainingReason);
+        return;
+      }
+      scoreSelectedMarkerIds.add(marker.id);
+      pruneInvalidScoreSelections();
+      updateScoreSelectionUi();
+      playScoreSelectionEffect(marker.id);
+      return;
+    }
+
     const reason = scoreBlockReason(marker);
     if (reason) {
       showToast(reason);
