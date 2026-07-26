@@ -6,6 +6,7 @@
   const CATALOG = (Array.isArray(window.CONSTRAINT_CATALOG) ? window.CONSTRAINT_CATALOG : []).filter((item) => CATEGORY_ORDER.includes(item?.category));
   const CURRENT_KEY = 'endfield.constraintBoard.current.v1';
   const VERSION_KEY = 'endfield.constraintBoard.versions.v1';
+  const PLACEMENT_DRAWER_POSITION_KEY = 'endfield.constraintBoard.placementDrawerPosition.v1';
   const CATEGORY_CLASS = { 팀: 'team', 조작: 'control', 환경: 'env' };
   const MIN_BOARD_GRID_COLUMNS = 8;
   const MAX_BOARD_GRID_COLUMNS = 48;
@@ -20,6 +21,7 @@
   const placementList = document.getElementById('placement-marker-list');
   const placementDrawer = document.getElementById('placement-drawer');
   const placementDrawerButton = document.getElementById('open-placement-modal');
+  const placementDrawerHandle = document.getElementById('placement-drag-handle');
   const trayViewToggle = document.getElementById('toggle-tray-view');
   const selectionStatus = document.getElementById('marker-selection-status');
   const scoreSelectionTotal = document.getElementById('score-selection-total');
@@ -2015,15 +2017,136 @@
     }));
   }
 
+  function readPlacementDrawerPosition() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PLACEMENT_DRAWER_POSITION_KEY) || 'null');
+      if (!saved || !Number.isFinite(saved.left) || !Number.isFinite(saved.top)) return null;
+      return saved;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function savePlacementDrawerPosition() {
+    if (!placementDrawer || placementDrawer.hidden || !placementDrawer.classList.contains('is-positioned')) return;
+    const rect = placementDrawer.getBoundingClientRect();
+    try {
+      localStorage.setItem(PLACEMENT_DRAWER_POSITION_KEY, JSON.stringify({
+        left: Math.round(rect.left),
+        top: Math.round(rect.top),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
+      }));
+    } catch (_) {}
+  }
+
+  function clampPlacementDrawerPosition(left, top, width, height) {
+    const margin = 8;
+    const maxWidth = Math.max(260, window.innerWidth - margin * 2);
+    const maxHeight = Math.max(240, window.innerHeight - margin * 2);
+    const safeWidth = Math.min(Math.max(260, width), maxWidth);
+    const safeHeight = Math.min(Math.max(240, height), maxHeight);
+    return {
+      left: Math.min(Math.max(margin, left), Math.max(margin, window.innerWidth - safeWidth - margin)),
+      top: Math.min(Math.max(margin, top), Math.max(margin, window.innerHeight - safeHeight - margin)),
+      width: safeWidth,
+      height: safeHeight
+    };
+  }
+
+  function positionPlacementDrawer(savedPosition = null) {
+    if (!placementDrawer || placementDrawer.hidden) return;
+    const rect = placementDrawer.getBoundingClientRect();
+    const source = savedPosition || readPlacementDrawerPosition();
+    if (!source) return;
+    const next = clampPlacementDrawerPosition(
+      Number(source.left),
+      Number(source.top),
+      Number(source.width) || rect.width,
+      Number(source.height) || rect.height
+    );
+    placementDrawer.classList.add('is-positioned');
+    placementDrawer.style.left = `${next.left}px`;
+    placementDrawer.style.top = `${next.top}px`;
+    placementDrawer.style.right = 'auto';
+    placementDrawer.style.bottom = 'auto';
+    placementDrawer.style.width = `${next.width}px`;
+    placementDrawer.style.height = `${next.height}px`;
+  }
+
+  function beginPlacementDrawerDrag(event) {
+    if (!placementDrawerHandle || placementDrawer.hidden) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const rect = placementDrawer.getBoundingClientRect();
+    const initial = clampPlacementDrawerPosition(rect.left, rect.top, rect.width, rect.height);
+    placementDrawer.classList.add('is-positioned', 'is-dragging');
+    document.body.classList.add('placement-drawer-dragging');
+    placementDrawer.style.left = `${initial.left}px`;
+    placementDrawer.style.top = `${initial.top}px`;
+    placementDrawer.style.right = 'auto';
+    placementDrawer.style.bottom = 'auto';
+    placementDrawer.style.width = `${initial.width}px`;
+    placementDrawer.style.height = `${initial.height}px`;
+
+    const pointerId = event.pointerId;
+    const offsetX = event.clientX - initial.left;
+    const offsetY = event.clientY - initial.top;
+    placementDrawerHandle.setPointerCapture?.(pointerId);
+
+    function move(moveEvent) {
+      if (moveEvent.pointerId !== pointerId) return;
+      const next = clampPlacementDrawerPosition(
+        moveEvent.clientX - offsetX,
+        moveEvent.clientY - offsetY,
+        initial.width,
+        initial.height
+      );
+      placementDrawer.style.left = `${next.left}px`;
+      placementDrawer.style.top = `${next.top}px`;
+      moveEvent.preventDefault();
+    }
+
+    function end(endEvent) {
+      if (endEvent.pointerId !== pointerId) return;
+      placementDrawerHandle.releasePointerCapture?.(pointerId);
+      placementDrawerHandle.removeEventListener('pointermove', move);
+      placementDrawerHandle.removeEventListener('pointerup', end);
+      placementDrawerHandle.removeEventListener('pointercancel', end);
+      placementDrawer.classList.remove('is-dragging');
+      document.body.classList.remove('placement-drawer-dragging');
+      savePlacementDrawerPosition();
+    }
+
+    placementDrawerHandle.addEventListener('pointermove', move);
+    placementDrawerHandle.addEventListener('pointerup', end);
+    placementDrawerHandle.addEventListener('pointercancel', end);
+  }
+
+  function keepPlacementDrawerInViewport() {
+    if (!placementDrawer || placementDrawer.hidden || !placementDrawer.classList.contains('is-positioned')) return;
+    const rect = placementDrawer.getBoundingClientRect();
+    const next = clampPlacementDrawerPosition(rect.left, rect.top, rect.width, rect.height);
+    placementDrawer.style.left = `${next.left}px`;
+    placementDrawer.style.top = `${next.top}px`;
+    placementDrawer.style.width = `${next.width}px`;
+    placementDrawer.style.height = `${next.height}px`;
+    savePlacementDrawerPosition();
+  }
+
   function openPlacementDrawer() {
     renderPlacementList();
     bindMarkerEvents();
     placementDrawer.hidden = false;
     placementDrawerButton.setAttribute('aria-expanded', 'true');
     document.body.classList.add('placement-drawer-open');
+    requestAnimationFrame(() => positionPlacementDrawer());
   }
 
   function closePlacementDrawer() {
+    savePlacementDrawerPosition();
     placementDrawer.hidden = true;
     placementDrawerButton.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('placement-drawer-open');
@@ -2033,6 +2156,8 @@
     if (placementDrawer.hidden) openPlacementDrawer();
     else closePlacementDrawer();
   });
+  placementDrawerHandle?.addEventListener('pointerdown', beginPlacementDrawerDrag);
+  window.addEventListener('resize', keepPlacementDrawerInViewport);
   document.querySelectorAll('[data-close-placement-drawer]').forEach((button) => button.addEventListener('click', closePlacementDrawer));
 
   function syncRelationVisibilityControls() {

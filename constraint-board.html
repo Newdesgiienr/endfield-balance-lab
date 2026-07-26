@@ -6,7 +6,7 @@
   <meta name="description" content="제약 마크를 위기 협약 제약 설계 현황판에 배치하고 충돌·시너지 관계와 버전별 설계 기록을 관리하는 Endfield Balance Lab 제약 설계 페이지">
   <title>제약 설계 | Endfield Balance Lab</title>
   <link rel="stylesheet" href="styles.css?v=68">
-  <link rel="stylesheet" href="constraint-board.css?v=97">
+  <link rel="stylesheet" href="constraint-board.css?v=99">
 </head>
 <body>
   <header class="app-topbar">
@@ -133,7 +133,7 @@
   <div id="modal-backdrop" class="board-modal-backdrop" hidden></div>
 
   <aside id="placement-drawer" class="placement-drawer" role="dialog" aria-modal="false" aria-labelledby="placement-title" hidden>
-    <header><div><small>UNPLACED CONSTRAINTS</small><h2 id="placement-title">미배치 제약 보관함</h2><p>마크를 현황판의 1·2·3점 구역으로 직접 끌어 놓거나 점수 버튼으로 빠르게 배치하세요.</p></div><button type="button" data-close-placement-drawer aria-label="미배치 제약 보관함 닫기">×</button></header>
+    <header><div class="placement-heading-copy"><small>UNPLACED CONSTRAINTS</small><div class="placement-title-row"><h2 id="placement-title">미배치 제약 보관함</h2><button id="placement-drag-handle" class="placement-drag-handle" type="button" aria-label="미배치 제약 보관함 이동" title="잡고 드래그하여 창 이동"><span aria-hidden="true">⋮⋮</span></button></div><p>마크를 현황판의 1·2·3점 구역으로 직접 끌어 놓거나 점수 버튼으로 빠르게 배치하세요.</p></div><button type="button" data-close-placement-drawer aria-label="미배치 제약 보관함 닫기">×</button></header>
     <div class="placement-drawer-body">
       <div id="placement-marker-list" class="placement-marker-list"></div>
     </div>
@@ -173,6 +173,6 @@
   <script src="saved-analyses.js?v=64"></script>
   <script src="analysis-store.js?v=63"></script>
   <script src="constraint-data.js?v=74"></script>
-  <script src="constraint-board.js?v=97"></script>
+  <script src="constraint-board.js?v=99"></script>
 </body>
 </html>

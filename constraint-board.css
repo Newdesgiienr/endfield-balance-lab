@@ -1338,3 +1338,94 @@ body.placement-drawer-open #open-placement-modal { background:#263541; }
     text-shadow: none;
   }
 }
+
+
+/* v98: draggable unplaced-constraint drawer. */
+.placement-heading-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.placement-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.placement-title-row h2 {
+  min-width: 0;
+}
+.placement-drag-handle {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #d4dde4;
+  border-radius: 10px;
+  background: #f2f5f7;
+  color: #6c7984;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.placement-drag-handle:hover {
+  border-color: #bdc9d2;
+  background: #e9eef2;
+  color: #34434f;
+}
+.placement-drag-handle:active,
+.placement-drawer.is-dragging .placement-drag-handle {
+  cursor: grabbing;
+  background: #263541;
+  color: #fff;
+}
+.placement-drag-handle span {
+  display: block;
+  transform: rotate(90deg);
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: -5px;
+}
+.placement-drawer.is-positioned {
+  right: auto;
+  bottom: auto;
+}
+.placement-drawer.is-dragging {
+  transition: none !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body.placement-drawer-dragging {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (max-width:700px) {
+  .placement-title-row { gap: 7px; }
+  .placement-drag-handle {
+    width: 32px;
+    height: 29px;
+  }
+}
+
+
+/* v99: optically center the three-dot drag grip inside its rounded button. */
+.placement-drag-handle span {
+  display: block;
+  width: 18px;
+  height: 8px;
+  margin: 0;
+  transform: none;
+  font-size: 0;
+  line-height: 0;
+  letter-spacing: 0;
+  background:
+    radial-gradient(circle at 2px 4px, currentColor 0 1.6px, transparent 1.8px),
+    radial-gradient(circle at 9px 4px, currentColor 0 1.6px, transparent 1.8px),
+    radial-gradient(circle at 16px 4px, currentColor 0 1.6px, transparent 1.8px);
+  background-repeat: no-repeat;
+}
