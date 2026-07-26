@@ -1454,3 +1454,28 @@ body.placement-drawer-dragging {
     0 0 18px rgba(166, 190, 235, .08);
   pointer-events: none;
 }
+
+
+/* v103: keep relationship lines below marker cards and their category/phase badges. */
+.tier-dropzone {
+  isolation: auto;
+}
+.gatekeeper-cell-overlay {
+  z-index: 0;
+}
+.relation-layer {
+  z-index: 1;
+}
+.board-marker {
+  z-index: 4;
+}
+.board-marker .marker-badge-row,
+.board-marker .marker-category,
+.board-marker .marker-phase-badge {
+  position: absolute;
+  z-index: 9;
+}
+.board-marker .marker-badge-row .marker-category,
+.board-marker .marker-badge-row .marker-phase-badge {
+  position: relative;
+}
