@@ -6,7 +6,7 @@
   <meta name="description" content="제약 마크를 위기 협약 제약 설계 현황판에 배치하고 충돌·시너지 관계와 버전별 설계 기록을 관리하는 Endfield Balance Lab 제약 설계 페이지">
   <title>제약 설계 | Endfield Balance Lab</title>
   <link rel="stylesheet" href="styles.css?v=68">
-  <link rel="stylesheet" href="constraint-board.css?v=91">
+  <link rel="stylesheet" href="constraint-board.css?v=93">
 </head>
 <body>
   <header class="app-topbar">
@@ -72,13 +72,14 @@
       <div id="constraint-board-scroll" class="constraint-board-scroll">
         <div id="constraint-board" class="constraint-board" aria-label="제약 마크 배치 현황판">
           <svg id="relation-layer" class="relation-layer" aria-label="제약 관계선"></svg>
+          <div id="selection-marquee" class="selection-marquee" aria-hidden="true" hidden></div>
           <section class="score-row score-row-1" data-tier="1" aria-label="1점 제약 구역"><strong class="score-label">1<small>★</small></strong><div class="tier-dropzone" data-tier="1"></div></section>
           <section class="score-row score-row-2" data-tier="2" aria-label="2점 제약 구역"><strong class="score-label">2<small>★</small></strong><div class="tier-dropzone" data-tier="2"></div></section>
           <section class="score-row score-row-3" data-tier="3" aria-label="3점 제약 구역"><strong class="score-label">3<small>★</small></strong><div class="tier-dropzone" data-tier="3"></div></section>
         </div>
       </div>
       <div id="board-drop-hint" class="board-instruction">
-        <span>드래그: 배치·이동</span><span>클릭: 총점 포함/제외</span><span>SHIFT+클릭: 여러 마크 선택</span><span>선택 마크 드래그: 점수 줄 유지·가로 이동</span><span>ENTER: 일반 묶음</span><span>↑ 방향키: 문지기 묶음</span><span>↓ 방향키: 2차 제약 지정/해제</span><span>아래로 끌기: 현황판에서 제거</span><span>길게 누르기: 충돌 연결</span><span>빠르게 세 번 누르기: 시너지 연결</span><strong id="marker-selection-status" class="marker-selection-status" aria-live="polite" hidden>선택 없음</strong>
+        <span>드래그: 배치·이동</span><span>빈 공간 드래그: 범위 선택</span><span>클릭: 총점 포함/제외</span><span>SHIFT+클릭: 여러 마크 선택</span><span>선택 마크 드래그: 점수 줄 유지·가로 이동</span><span>ENTER: 일반 묶음</span><span>↑ 방향키: 문지기 묶음</span><span>↓ 방향키: 2차 제약 지정/해제</span><span>아래로 끌기: 현황판에서 제거</span><span>길게 누르기: 충돌 연결</span><span>빠르게 세 번 누르기: 시너지 연결</span><strong id="marker-selection-status" class="marker-selection-status" aria-live="polite" hidden>선택 없음</strong>
       </div>
     </section>
 
@@ -172,6 +173,6 @@
   <script src="saved-analyses.js?v=64"></script>
   <script src="analysis-store.js?v=63"></script>
   <script src="constraint-data.js?v=74"></script>
-  <script src="constraint-board.js?v=91"></script>
+  <script src="constraint-board.js?v=93"></script>
 </body>
 </html>

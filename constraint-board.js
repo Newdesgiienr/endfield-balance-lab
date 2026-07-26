@@ -12,6 +12,7 @@
 
   const board = document.getElementById('constraint-board');
   const relationLayer = document.getElementById('relation-layer');
+  const selectionMarquee = document.getElementById('selection-marquee');
   const tray = document.getElementById('marker-tray');
   const placementList = document.getElementById('placement-marker-list');
   const placementDrawer = document.getElementById('placement-drawer');
@@ -38,6 +39,7 @@
   let saveTimer = null;
   let toastTimer = null;
   let interaction = null;
+  let marqueeSelection = null;
   let aim = null;
   let activeRelationId = null;
   let activeGroupId = null;
@@ -427,6 +429,135 @@
     updateSelectionUi();
   }
 
+
+  function marqueeClientRect(startX, startY, endX, endY) {
+    const boardRect = board.getBoundingClientRect();
+    const x1 = clamp(startX, boardRect.left, boardRect.right);
+    const x2 = clamp(endX, boardRect.left, boardRect.right);
+    const y1 = clamp(startY, boardRect.top, boardRect.bottom);
+    const y2 = clamp(endY, boardRect.top, boardRect.bottom);
+    return {
+      left: Math.min(x1, x2),
+      right: Math.max(x1, x2),
+      top: Math.min(y1, y2),
+      bottom: Math.max(y1, y2),
+      width: Math.abs(x2 - x1),
+      height: Math.abs(y2 - y1)
+    };
+  }
+
+  function markerIntersectsMarquee(element, rect) {
+    const markerRect = element.getBoundingClientRect();
+    return markerRect.right >= rect.left
+      && markerRect.left <= rect.right
+      && markerRect.bottom >= rect.top
+      && markerRect.top <= rect.bottom;
+  }
+
+  function positionSelectionMarquee(rect) {
+    if (!selectionMarquee) return;
+    const boardRect = board.getBoundingClientRect();
+    selectionMarquee.style.left = `${rect.left - boardRect.left}px`;
+    selectionMarquee.style.top = `${rect.top - boardRect.top}px`;
+    selectionMarquee.style.width = `${rect.width}px`;
+    selectionMarquee.style.height = `${rect.height}px`;
+  }
+
+  function applyMarqueeSelection(rect) {
+    if (!marqueeSelection) return;
+    const nextIds = new Set(marqueeSelection.additive ? marqueeSelection.initialIds : []);
+    board.querySelectorAll('.board-marker[data-marker-id]').forEach((element) => {
+      if (markerIntersectsMarquee(element, rect)) nextIds.add(element.dataset.markerId);
+    });
+    selectedMarkerIds.clear();
+    nextIds.forEach((id) => selectedMarkerIds.add(id));
+    updateSelectionUi();
+  }
+
+  function onBoardPointerDown(event) {
+    if (event.button !== 0 || interaction || aim || marqueeSelection) return;
+    if (event.pointerType === 'touch') return;
+    if (event.target.closest('[data-marker-id],button,.relation-hit,.group-hit')) return;
+
+    event.preventDefault();
+    hideTooltip();
+    closeRelationMenu();
+
+    const additive = event.shiftKey;
+    const initialIds = additive ? [...selectedMarkerIds] : [];
+    if (!additive) clearMarkerSelection();
+
+    marqueeSelection = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      additive,
+      initialIds,
+      moved: false
+    };
+
+    if (selectionMarquee) selectionMarquee.hidden = true;
+    board.classList.add('is-marquee-selecting');
+    try { board.setPointerCapture(event.pointerId); } catch (_) {}
+    document.addEventListener('pointermove', onBoardMarqueePointerMove);
+    document.addEventListener('pointerup', onBoardMarqueePointerUp, { once: true });
+    document.addEventListener('pointercancel', onBoardMarqueePointerUp, { once: true });
+  }
+
+  function onBoardMarqueePointerMove(event) {
+    if (!marqueeSelection || event.pointerId !== marqueeSelection.pointerId) return;
+    marqueeSelection.lastX = event.clientX;
+    marqueeSelection.lastY = event.clientY;
+    const distance = Math.hypot(event.clientX - marqueeSelection.startX, event.clientY - marqueeSelection.startY);
+    if (!marqueeSelection.moved && distance < 5) return;
+
+    marqueeSelection.moved = true;
+    const rect = marqueeClientRect(
+      marqueeSelection.startX,
+      marqueeSelection.startY,
+      event.clientX,
+      event.clientY
+    );
+    if (selectionMarquee) selectionMarquee.hidden = false;
+    positionSelectionMarquee(rect);
+    applyMarqueeSelection(rect);
+  }
+
+  function onBoardMarqueePointerUp(event) {
+    if (!marqueeSelection) return;
+    if (event.pointerId != null && event.pointerId !== marqueeSelection.pointerId) return;
+
+    const wasMoved = marqueeSelection.moved;
+    const additive = marqueeSelection.additive;
+    if (wasMoved) {
+      const rect = marqueeClientRect(
+        marqueeSelection.startX,
+        marqueeSelection.startY,
+        marqueeSelection.lastX,
+        marqueeSelection.lastY
+      );
+      applyMarqueeSelection(rect);
+    }
+
+    try { board.releasePointerCapture(marqueeSelection.pointerId); } catch (_) {}
+    document.removeEventListener('pointermove', onBoardMarqueePointerMove);
+    board.classList.remove('is-marquee-selecting');
+    if (selectionMarquee) {
+      selectionMarquee.hidden = true;
+      selectionMarquee.removeAttribute('style');
+    }
+    marqueeSelection = null;
+
+    if (wasMoved) {
+      showToast(selectedMarkerIds.size
+        ? `${selectedMarkerIds.size}개 제약을 범위 선택했습니다. 선택된 마크를 드래그하면 함께 이동합니다.`
+        : '범위 안에 제약 마크가 없습니다.');
+    } else if (!additive) {
+      clearMarkerSelection();
+    }
+  }
 
   function groupSignature(markerIds) {
     return [...new Set(markerIds.map(String))].sort().join('|');
@@ -1768,9 +1899,7 @@
     scheduleSave();
   });
 
-  board.addEventListener('pointerdown', (event) => {
-    if (!event.target.closest('[data-marker-id]') && !event.shiftKey) clearMarkerSelection();
-  });
+  board.addEventListener('pointerdown', onBoardPointerDown);
 
   document.getElementById('recommendation-search').addEventListener('input', (event) => {
     recommendationQuery = event.target.value;
