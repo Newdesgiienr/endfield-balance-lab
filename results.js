@@ -62,12 +62,13 @@
         <div class="brand-copy">
           <a class="brand-title" href="index.html"><strong>ENDFIELD BALANCE LAB</strong></a>
           <div class="brand-lower">
-            <small>캐릭터 전투 구조 데이터베이스</small>
+            <small>엔드필드 위기 협약 데이터베이스</small>
             <nav class="site-nav" aria-label="페이지 전환">
               <a href="glossary.html">용어 사전</a>
               <a href="index.html">캐릭터</a>
               <a href="party.html">파티 분석</a>
               <a href="results.html" class="active" aria-current="page">분석 결과</a>
+              <a href="dungeon-monsters.html">스테이지 구성</a>
               <a href="constraints.html">제약 추천</a>
               <a href="constraint-board.html">제약 설계</a>
             </nav>

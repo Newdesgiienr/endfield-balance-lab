@@ -4,7 +4,7 @@
   const STORE = window.AnalysisStore || { getAll: () => [] };
   const CATEGORY_ORDER = ['팀', '조작', '환경'];
   const CATALOG = (Array.isArray(window.CONSTRAINT_CATALOG) ? window.CONSTRAINT_CATALOG : []).filter((item) => CATEGORY_ORDER.includes(item?.category));
-  const CURRENT_KEY = 'endfield.constraintBoard.current.v1';
+  const CURRENT_KEY = 'endfield.constraintBoard.current.v2'; // v111: begin with a clean work board without deleting the older autosave.
   const VERSION_KEY = 'endfield.constraintBoard.versions.v1';
   const PLACEMENT_DRAWER_POSITION_KEY = 'endfield.constraintBoard.placementDrawerPosition.v1';
   const CATEGORY_CLASS = { 팀: 'team', 조작: 'control', 환경: 'env' };
@@ -12,6 +12,9 @@
   const MAX_BOARD_GRID_COLUMNS = 48;
   const BOARD_TRAILING_COLUMNS = 2;
   const BOARD_LABEL_WIDTH = 95;
+  const PREVIEW_COLUMN_WIDTH = 175;
+  const PREVIEW_ROW_HEIGHT = 190;
+  const PREVIEW_LABEL_WIDTH = 95;
   const analyses = STORE.getAll();
 
   const board = document.getElementById('constraint-board');
@@ -171,20 +174,48 @@
     }
   }
 
+  function normalizeVersionRecord(item) {
+    return {
+      id: String(item?.id || uid('version')),
+      name: String(item?.name || '이름 없는 버전'),
+      memo: String(item?.memo || ''),
+      createdAt: item?.createdAt || new Date().toISOString(),
+      snapshot: normalizeState(item?.snapshot)
+    };
+  }
+
   function loadVersions() {
+    const defaults = Array.isArray(window.CONSTRAINT_BOARD_DEFAULT_VERSIONS)
+      ? window.CONSTRAINT_BOARD_DEFAULT_VERSIONS.filter(Boolean)
+      : [];
     try {
       const raw = localStorage.getItem(VERSION_KEY);
       const parsed = raw ? safeParse(raw, []) : [];
-      if (!Array.isArray(parsed)) return [];
-      return parsed.filter(Boolean).map((item) => ({
-        id: String(item.id || uid('version')),
-        name: String(item.name || '이름 없는 버전'),
-        memo: String(item.memo || ''),
-        createdAt: item.createdAt || new Date().toISOString(),
-        snapshot: normalizeState(item.snapshot)
-      })).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+      const merged = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+      let addedDefault = false;
+
+      defaults.forEach((seed) => {
+        const exists = merged.some((item) =>
+          String(item?.id || '') === String(seed?.id || '') ||
+          (String(item?.name || '') === String(seed?.name || '') &&
+            String(item?.createdAt || '') === String(seed?.createdAt || ''))
+        );
+        if (!exists) {
+          merged.push(deepClone(seed));
+          addedDefault = true;
+        }
+      });
+
+      const normalized = merged.map(normalizeVersionRecord)
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+
+      if (addedDefault) {
+        try { localStorage.setItem(VERSION_KEY, JSON.stringify(normalized)); } catch (_) {}
+      }
+      return normalized;
     } catch (_) {
-      return [];
+      return defaults.map(normalizeVersionRecord)
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
     }
   }
 
@@ -2290,7 +2321,13 @@
   });
 
   function nextVersionName() {
-    return `v0.${versions.length + 1}`;
+    const steps = versions.map((version) => {
+      const match = String(version?.name || '').trim().match(/^v(\d+)\.([0-9])$/i);
+      if (!match) return null;
+      return Number(match[1]) * 10 + Number(match[2]);
+    }).filter(Number.isFinite);
+    const nextStep = steps.length ? Math.max(...steps) + 1 : 10;
+    return `v${Math.floor(nextStep / 10)}.${nextStep % 10}`;
   }
 
   document.getElementById('save-version-button').addEventListener('click', () => {
@@ -2351,8 +2388,128 @@
     return new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(date);
   }
 
+  function previewBoardColumns(snapshot) {
+    const highestColumn = (snapshot.markers || []).reduce((highest, marker) => {
+      if (marker.tier == null) return highest;
+      const stored = Number(marker.gridCol);
+      if (Number.isFinite(stored)) return Math.max(highest, Math.round(stored));
+      return highest;
+    }, -1);
+    return clamp(Math.max(
+      MIN_BOARD_GRID_COLUMNS,
+      Number(snapshot.boardColumns) || MIN_BOARD_GRID_COLUMNS,
+      highestColumn + 1 + BOARD_TRAILING_COLUMNS
+    ), MIN_BOARD_GRID_COLUMNS, MAX_BOARD_GRID_COLUMNS);
+  }
+
+  function previewMarkerColumn(marker, columns) {
+    if (Number.isFinite(Number(marker.gridCol))) {
+      return clamp(Math.round(Number(marker.gridCol)), 0, columns - 1);
+    }
+    return clamp(Math.floor(clamp(Number(marker.x) || .5, 0, .9999) * columns), 0, columns - 1);
+  }
+
+  function previewMarkerPoint(marker, columns) {
+    return {
+      x: PREVIEW_LABEL_WIDTH + (previewMarkerColumn(marker, columns) + .5) * PREVIEW_COLUMN_WIDTH,
+      y: (Number(marker.tier) - .5) * PREVIEW_ROW_HEIGHT
+    };
+  }
+
+  function previewMarkerHtml(marker, columns) {
+    const left = (previewMarkerColumn(marker, columns) + .5) * PREVIEW_COLUMN_WIDTH;
+    const phase = marker.isSecondPhase ? '<span class="version-preview-phase-badge">2차</span>' : '';
+    return `<article class="version-preview-marker" data-category="${esc(marker.category)}" style="left:${left}px">
+      <div class="version-preview-badge-row">${phase}<span class="version-preview-category-badge">${esc(marker.category)}</span></div>
+      <div class="version-preview-marker-label">${rich(marker.label)}</div>
+    </article>`;
+  }
+
+  function previewGatekeeperOverlays(snapshot, tier, markerMap, columns) {
+    const highlighted = new Set();
+    (snapshot.groups || []).forEach((group) => {
+      if (group.type !== 'gatekeeper') return;
+      const members = (group.markerIds || []).map((id) => markerMap.get(id)).filter((marker) => marker?.tier != null);
+      if (members.length < 2 || !members.every((marker) => Number(marker.tier) === Number(tier))) return;
+      const memberColumns = [...new Set(members.map((marker) => previewMarkerColumn(marker, columns)))];
+      if (memberColumns.length < 2) return;
+      memberColumns.forEach((column) => highlighted.add(column));
+    });
+    return [...highlighted].sort((a, b) => a - b).map((column) =>
+      `<span class="version-preview-gatekeeper-cell" style="left:${column * PREVIEW_COLUMN_WIDTH}px;width:${PREVIEW_COLUMN_WIDTH}px"></span>`
+    ).join('');
+  }
+
+  function previewLine(x1, y1, x2, y2, attributes) {
+    return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" ${attributes}></line>`;
+  }
+
+  function previewRelationMarkup(snapshot, markerMap, columns, boardWidth) {
+    let markup = '';
+    const points = new Map();
+    markerMap.forEach((marker, id) => {
+      if ([1, 2, 3].includes(Number(marker.tier))) points.set(id, previewMarkerPoint(marker, columns));
+    });
+
+    (snapshot.relations || []).forEach((relation) => {
+      if (relation.type === 'conflict' && snapshot.relationVisibility?.conflict === false) return;
+      if (relation.type === 'synergy' && snapshot.relationVisibility?.synergy === false) return;
+      const a = points.get(relation.a);
+      const b = points.get(relation.b);
+      if (!a || !b) return;
+      if (relation.type === 'conflict') {
+        markup += previewLine(a.x, a.y, b.x, b.y, 'class="version-preview-conflict-line"');
+        return;
+      }
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const length = Math.max(1, Math.hypot(dx, dy));
+      const ox = (-dy / length) * 3.2;
+      const oy = (dx / length) * 3.2;
+      markup += previewLine(a.x + ox, a.y + oy, b.x + ox, b.y + oy, 'class="version-preview-synergy-line"');
+      markup += previewLine(a.x - ox, a.y - oy, b.x - ox, b.y - oy, 'class="version-preview-synergy-line"');
+    });
+
+    (snapshot.groups || []).forEach((group) => {
+      const groupPoints = (group.markerIds || []).map((id) => points.get(id)).filter(Boolean)
+        .sort((a, b) => a.y - b.y || a.x - b.x);
+      if (groupPoints.length < 2) return;
+      const pointString = groupPoints.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ');
+      const gatekeeper = group.type === 'gatekeeper';
+      markup += `<polyline points="${pointString}" class="${gatekeeper ? 'version-preview-gatekeeper-line' : 'version-preview-normal-group-line'}"></polyline>`;
+      if (gatekeeper) {
+        const middleIndex = Math.floor((groupPoints.length - 1) / 2);
+        const a = groupPoints[middleIndex];
+        const b = groupPoints[Math.min(middleIndex + 1, groupPoints.length - 1)];
+        const cx = (a.x + b.x) / 2;
+        const cy = (a.y + b.y) / 2;
+        markup += `<circle class="version-preview-gatekeeper-node" cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="7"></circle>`;
+      }
+    });
+
+    return `<svg class="version-preview-relation-layer" viewBox="0 0 ${boardWidth} ${PREVIEW_ROW_HEIGHT * 3}" preserveAspectRatio="none" aria-hidden="true">${markup}</svg>`;
+  }
+
   function miniBoard(snapshot) {
-    return `<div class="mini-board-scroll"><div class="mini-board">${[1, 2, 3].map((tier) => `<div class="mini-score-row"><b>${tier}★</b>${snapshot.markers.filter((marker) => marker.tier === tier).map((marker) => `<span class="mini-marker" data-category="${esc(marker.category)}" style="left:${5 + marker.x * 92}%;top:${marker.y * 100}%">${rich(marker.label)}</span>`).join('')}</div>`).join('')}</div></div>`;
+    const columns = previewBoardColumns(snapshot);
+    const boardWidth = PREVIEW_LABEL_WIDTH + columns * PREVIEW_COLUMN_WIDTH;
+    const markerMap = new Map((snapshot.markers || []).map((marker) => [marker.id, marker]));
+    const relations = previewRelationMarkup(snapshot, markerMap, columns, boardWidth);
+    const rows = [1, 2, 3].map((tier) => {
+      const markers = (snapshot.markers || []).filter((marker) => Number(marker.tier) === tier);
+      return `<div class="version-preview-score-row version-preview-score-row-${tier}">
+        <b class="version-preview-score-label"><span>${tier}</span><small>★</small></b>
+        <div class="version-preview-dropzone" style="width:${columns * PREVIEW_COLUMN_WIDTH}px;background-size:${PREVIEW_COLUMN_WIDTH}px 100%">
+          ${previewGatekeeperOverlays(snapshot, tier, markerMap, columns)}
+          ${markers.map((marker) => previewMarkerHtml(marker, columns)).join('')}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="version-preview-board-scroll" tabindex="0" aria-label="버전 현황판 미리보기. 좌우로 스크롤할 수 있습니다.">
+      <div class="version-preview-board" style="width:${boardWidth}px;min-width:${boardWidth}px">
+        ${relations}${rows}
+      </div>
+    </div>`;
   }
 
   function previewVersion(id) {
