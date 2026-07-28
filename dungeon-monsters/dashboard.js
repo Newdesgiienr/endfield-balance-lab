@@ -1032,6 +1032,45 @@
     return `placement-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 
+  let waveOverviewFitFrame = 0;
+  let waveOverviewResizeObserver = null;
+
+  function fitWaveOverviewLine(element, maximumSize, minimumSize) {
+    if (!element || element.clientWidth <= 0) return;
+    let size = maximumSize;
+    element.style.setProperty('font-size', `${size}px`, 'important');
+    while (size > minimumSize && element.scrollWidth > element.clientWidth + 0.5) {
+      size = Math.max(minimumSize, size - 0.5);
+      element.style.setProperty('font-size', `${size}px`, 'important');
+    }
+  }
+
+  function fitWaveOverviewText() {
+    $$('.wave-overview-card').forEach(card => {
+      fitWaveOverviewLine($('.wave-card-heading strong', card), 20, 13);
+      fitWaveOverviewLine($('.wave-card-heading small', card), 11, 8);
+      $$('.wave-metric strong', card).forEach(element => fitWaveOverviewLine(element, 20, 12));
+      $$('.wave-metric small', card).forEach(element => fitWaveOverviewLine(element, 10, 8));
+    });
+  }
+
+  function scheduleWaveOverviewTextFit() {
+    cancelAnimationFrame(waveOverviewFitFrame);
+    waveOverviewFitFrame = requestAnimationFrame(fitWaveOverviewText);
+  }
+
+  function observeWaveOverviewSize(target) {
+    if (!target || target.dataset.waveTextFitObserved === 'true') return;
+    target.dataset.waveTextFitObserved = 'true';
+    window.addEventListener('resize', scheduleWaveOverviewTextFit);
+    if ('ResizeObserver' in window) {
+      waveOverviewResizeObserver ||= new ResizeObserver(scheduleWaveOverviewTextFit);
+      waveOverviewResizeObserver.observe(target);
+    } else {
+      window.addEventListener('resize', scheduleWaveOverviewTextFit);
+    }
+  }
+
   function renderWaveTabs() {
     const target = $('#wave-tabs');
     target.innerHTML = COMPOSITIONS[activeComposition].waves.map((wave, index) => {
@@ -1055,6 +1094,8 @@
       clearOrderSelection();
       renderEnemyWorkspace();
     }));
+    observeWaveOverviewSize(target);
+    scheduleWaveOverviewTextFit();
   }
 
   function paletteMonsters() {
