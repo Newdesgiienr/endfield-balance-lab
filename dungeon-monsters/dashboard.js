@@ -23,6 +23,48 @@
   const GRID_ROWS = 12;
   const METERS_PER_CELL = 2;
   const PLACEMENT_STORAGE_KEY = 'endfieldEnemyPlacementsV5UploadedCompositions';
+  const HP_BUFF_STORAGE_KEY = 'endfieldMonsterHpBuffPercentV1';
+
+  function normalizeHpBuffPercent(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.min(1000, Math.max(0, Math.round(numeric * 10) / 10));
+  }
+
+  function loadHpBuffPercent() {
+    try {
+      return normalizeHpBuffPercent(localStorage.getItem(HP_BUFF_STORAGE_KEY) ?? 0);
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  let hpBuffPercent = loadHpBuffPercent();
+
+  function saveHpBuffPercent() {
+    try {
+      localStorage.setItem(HP_BUFF_STORAGE_KEY, String(hpBuffPercent));
+    } catch (error) {
+      console.warn('몬스터 HP 증가율을 저장하지 못했습니다.');
+    }
+  }
+
+  function roundHp(value) {
+    return Math.round((Number(value) || 0) * 10) / 10;
+  }
+
+  function hpMultiplier() {
+    return 1 + hpBuffPercent / 100;
+  }
+
+  function monsterHp(monsterOrKey) {
+    const monster = typeof monsterOrKey === 'string' ? MONSTERS[monsterOrKey] : monsterOrKey;
+    return roundHp((monster?.hp || 0) * hpMultiplier());
+  }
+
+  function fmtHp(value) {
+    return Number(value || 0).toLocaleString('ko-KR', { maximumFractionDigits: 1 });
+  }
   const DEFAULT_POSITIONS = [
     [5,3],[6,3],[5,4],[6,4],
     [3,2],[8,2],[3,5],[8,5],
@@ -857,7 +899,7 @@
     return compositionPlacements(compositionId).reduce((totals, placement) => {
       const monster = MONSTERS[placement.monsterKey];
       totals.count += 1;
-      totals.hp += monster.hp;
+      totals.hp += monsterHp(monster);
       totals.atk += monster.atk;
       totals.stagger += monster.stagger;
       return totals;
@@ -1076,7 +1118,7 @@
     target.innerHTML = COMPOSITIONS[activeComposition].waves.map((wave, index) => {
       const placements = enemyPlacements[String(activeComposition)][index];
       const count = placements.length;
-      const waveHp = placements.reduce((sum, item) => sum + MONSTERS[item.monsterKey].hp, 0);
+      const waveHp = roundHp(placements.reduce((sum, item) => sum + monsterHp(item.monsterKey), 0));
       return `<button class="wave-tab wave-overview-card ${index === activeWaveIndex ? 'active' : ''}" data-wave-index="${index}" aria-pressed="${index === activeWaveIndex}">
         <div class="wave-card-heading">
           <small>WAVE ${String(index + 1).padStart(2, '0')}</small>
@@ -1084,7 +1126,7 @@
         </div>
         <div class="wave-card-metrics wave-card-metrics-compact">
           <div class="wave-metric wave-metric-count"><strong>${count}<span class="metric-unit">마리</span></strong><small>몬스터</small></div>
-          <div class="wave-metric wave-metric-hp"><strong>${fmt(waveHp)}</strong><small>총 HP</small></div>
+          <div class="wave-metric wave-metric-hp"><strong>${fmtHp(waveHp)}</strong><small>총 HP</small></div>
         </div>
       </button>`;
     }).join('');
@@ -1122,7 +1164,7 @@
         <div class="palette-monster-main">
           <div class="palette-monster-name"><strong>${monster.name}</strong><span class="class-pill ${monster.classKey}">${monster.class}</span></div>
           <small>${monster.id}</small>
-          <div class="palette-stat-line"><span>HP ${fmt(monster.hp)}</span><span>ATK ${fmt(monster.atk)}</span><span>사거리 ${monster.range}m</span></div>
+          <div class="palette-stat-line"><span>HP ${fmtHp(monsterHp(monster))}</span><span>ATK ${fmt(monster.atk)}</span><span>사거리 ${monster.range}m</span></div>
         </div>
         <div class="palette-count">${currentCounts.get(key) || 0}<small>배치</small></div>
       </article>
@@ -1633,7 +1675,7 @@
     target.innerHTML = `
       <div class="inspector-icon ${monster.classKey}"><img src="${monster.icon}" alt="${monster.name}" draggable="false"></div>
       <div class="inspector-identity"><small>${monster.class} · ${monster.id}</small><strong>${monster.name}</strong><span>${formatPlacementLabel(placement)}${placement.spawnOrder ? ` · ${placement.spawnOrder}차 등장` : ' · 등장 차수 미지정'}</span></div>
-      <div class="inspector-stat"><small>HP</small><strong>${fmt(monster.hp)}</strong></div>
+      <div class="inspector-stat"><small>HP</small><strong>${fmtHp(monsterHp(monster))}</strong></div>
       <div class="inspector-stat"><small>ATK</small><strong>${fmt(monster.atk)}</strong></div>
       <div class="inspector-stat"><small>강인도</small><strong>${fmt(monster.stagger)}</strong></div>
       <div class="inspector-stat range"><small>공격 사거리</small><strong>${monster.range}m</strong><span>반경 ${radiusCells.toFixed(2)}칸</span></div>
@@ -1680,14 +1722,27 @@
       <tr data-monster="${key}">
         <td><div class="monster-name-cell"><span class="monster-avatar">${monster.accent}</span><div><b>${monster.name}${currentKeys.has(key) ? ' · 현재 웨이브' : ''}</b><small>${monster.en} · ${monster.id}</small></div></div></td>
         <td><span class="class-pill ${monster.classKey}">${monster.class}</span></td>
-        <td class="stat-number">${fmt(monster.hp)}</td><td class="stat-number">${fmt(monster.atk)}</td><td class="stat-number">${fmt(monster.def)}</td><td class="stat-number">${fmt(monster.stagger)}</td><td>${monster.range}m</td>
+        <td class="stat-number">${fmtHp(monsterHp(monster))}</td><td class="stat-number">${fmt(monster.atk)}</td><td class="stat-number">${fmt(monster.def)}</td><td class="stat-number">${fmt(monster.stagger)}</td><td>${monster.range}m</td>
         <td><div class="resist-mini">${resistanceText(monster)}</div><small>${monster.feature}</small></td>
       </tr>
     `).join('') || '<tr><td colspan="8" style="text-align:center;padding:40px;color:#7f8996">조건에 맞는 몬스터가 없습니다.</td></tr>';
     $$('tr[data-monster]', body).forEach(row => row.addEventListener('click', () => openMonster(row.dataset.monster)));
   }
 
+  function syncHpBuffControl({ rewriteInput = true } = {}) {
+    const input = $('#monster-hp-buff-input');
+    const multiplier = $('#monster-hp-buff-multiplier');
+    if (input && rewriteInput && document.activeElement !== input) input.value = String(hpBuffPercent);
+    if (multiplier) {
+      const multiplierValue = Number.isInteger(hpBuffPercent)
+        ? hpMultiplier().toFixed(2)
+        : hpMultiplier().toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+      multiplier.textContent = `기본 HP × ${multiplierValue}`;
+    }
+  }
+
   function renderEnemyWorkspace() {
+    syncHpBuffControl();
     renderWaveTabs();
     renderMonsterPalette();
     renderBattleGrid();
@@ -1731,6 +1786,9 @@
           x: placement.x,
           y: placement.y,
           spawnOrder: placement.spawnOrder || null,
+          baseHp: monster?.hp ?? null,
+          hpBuffPercent,
+          hp: monster ? monsterHp(monster) : null,
           rangeMeters: monster?.range ?? null
         };
       })
@@ -1740,6 +1798,8 @@
       schemaVersion: 1,
       exportedAt: new Date().toISOString(),
       composition: activeComposition,
+      hpBuffPercent,
+      hpMultiplier: hpMultiplier(),
       grid: {
         columns: GRID_COLS,
         rows: GRID_ROWS,
@@ -2000,7 +2060,7 @@
       </div>
       <div class="monster-detail-body">
         <div class="stat-grid">
-          <div class="stat-box"><small>HP</small><strong>${fmt(monster.hp)}</strong></div>
+          <div class="stat-box"><small>HP</small><strong>${fmtHp(monsterHp(monster))}</strong></div>
           <div class="stat-box"><small>ATK</small><strong>${fmt(monster.atk)}</strong></div>
           <div class="stat-box"><small>DEF</small><strong>${fmt(monster.def)}</strong></div>
           <div class="stat-box"><small>강인도</small><strong>${fmt(monster.stagger)}</strong></div>
@@ -2049,6 +2109,23 @@
     renderMonsterPalette();
     renderMonsterTable();
   }));
+
+  const hpBuffInput = $('#monster-hp-buff-input');
+  hpBuffInput?.addEventListener('input', event => {
+    const raw = event.target.value;
+    if (raw === '' || !Number.isFinite(Number(raw))) return;
+    hpBuffPercent = normalizeHpBuffPercent(raw);
+    saveHpBuffPercent();
+    syncHpBuffControl({ rewriteInput: false });
+    renderEnemyWorkspace();
+  });
+  hpBuffInput?.addEventListener('change', event => {
+    hpBuffPercent = normalizeHpBuffPercent(event.target.value);
+    event.target.value = String(hpBuffPercent);
+    saveHpBuffPercent();
+    syncHpBuffControl({ rewriteInput: false });
+    renderEnemyWorkspace();
+  });
 
   $('#range-toggle-btn')?.addEventListener('click', () => {
     showAllRanges = !showAllRanges;
