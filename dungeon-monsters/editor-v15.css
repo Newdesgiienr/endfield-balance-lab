@@ -1,0 +1,87 @@
+/* V116: 구성 탭 내부를 웨이브 요약 카드형 정보 배치로 정돈한다.
+   탭 자체의 높이, 패딩, 폭과 외곽선은 기존 규칙을 그대로 사용한다. */
+
+.placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main{
+  display:flex!important;
+  align-items:center;
+  justify-content:flex-start;
+  gap:18px;
+  width:100%;
+  min-width:0;
+  height:100%;
+  margin:0;
+  white-space:nowrap;
+  text-align:left;
+}
+
+.placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-copy{
+  display:flex;
+  flex:0 0 auto;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  min-width:64px;
+  line-height:1;
+}
+
+.placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-copy > small{
+  display:block;
+  margin:0 0 5px!important;
+  color:#6d7884;
+  font-size:10px;
+  font-weight:900;
+  line-height:1;
+  letter-spacing:-.02em;
+}
+
+.placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-copy > b{
+  display:block;
+  margin:0;
+  color:inherit;
+  font-size:17px;
+  font-weight:950;
+  line-height:1;
+  letter-spacing:-.035em;
+}
+
+.placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main > em{
+  display:block;
+  flex:0 1 auto;
+  min-width:0;
+  margin:0;
+  overflow:hidden;
+  align-self:center;
+  color:#65717e;
+  font-size:11px;
+  font-style:normal;
+  font-weight:850;
+  line-height:1.1;
+  text-overflow:ellipsis;
+}
+
+.placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main > em strong{
+  color:#293746;
+  font-size:13px;
+  font-weight:950;
+  letter-spacing:-.025em;
+}
+
+.placement-setup-v8 .composition-bookmarks .composition-tab.active .composition-tab-copy > small{
+  color:#5c6773;
+}
+
+.placement-setup-v8 .composition-bookmarks .composition-tab.active .composition-tab-main > em{
+  color:#4f5d6b;
+}
+
+.placement-setup-v8 .composition-bookmarks .composition-tab.active .composition-tab-main > em strong{
+  color:#17232e;
+}
+
+@media (max-width:760px){
+  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main{gap:14px;}
+  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-copy{min-width:60px;}
+  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-copy > b{font-size:16px;}
+  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main > em{font-size:10px;}
+  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main > em strong{font-size:12px;}
+}
