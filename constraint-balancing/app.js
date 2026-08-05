@@ -350,7 +350,7 @@
             name: alpha?.name || `${monster.name} · α`,
             icon: alpha?.icon || monster.icon,
             class: alpha?.class || `${monster.class} 강화형`,
-            hp: monster.hp * 1.5,
+            hp: alpha?.hp ?? monster.hp * 1.5,
             baseHp: monster.hp,
             isEnhanced: true,
             alphaKey
@@ -1529,7 +1529,7 @@
       const alpha = monsters[alphaKey];
       targets.push({
         wave: wave.wave, phase: phase.order, monster, alpha,
-        beforeHp: monster.hp, afterHp: monster.hp * 1.5, deltaHp: monster.hp * .5
+        beforeHp: monster.hp, afterHp: alpha?.hp ?? monster.hp * 1.5, deltaHp: (alpha?.hp ?? monster.hp * 1.5) - monster.hp
       });
     })));
     const deltaHp = targets.reduce((sum, row) => sum + row.deltaHp, 0);
@@ -1579,10 +1579,10 @@
       ]);
       const targetRows = info.targets.map(row => `<div class="stage-enhance-target"><span><img src="${row.alpha?.icon || row.monster.icon}" alt=""><b>웨이브 ${row.wave} · ${row.monster.name}</b><small>${row.alpha?.name || `${row.monster.name} · α`}로 표시</small></span><em>${num0(row.beforeHp)} → ${num0(row.afterHp)}</em><strong class="negative">+${num0(row.deltaHp)}</strong></div>`).join('');
       const waveRows = info.waveRows.map(row => `<div class="compact-row"><b>웨이브 ${row.wave}</b><b>${num0(row.before)}</b><b>${num0(row.after)}</b><b class="${row.delta ? 'negative' : ''}">${row.delta ? `+${num0(row.delta)}` : '변화 없음'}</b></div>`).join('');
-      $('[data-role="stageEnhanceTable"]', root).innerHTML = `<h4>알파 개체 전환 대상</h4><p class="record-model-note">구성 1 · 기준 구성의 현재 몬스터 체력을 원본으로 유지하고, 선택 단계의 지정 개체에만 계산상 체력 50%를 추가합니다. DATAFIELD 파티 행동과 원본 DPS는 변경하지 않습니다.</p><div class="stage-enhance-target-list">${targetRows}</div><h4>웨이브별 총 HP</h4><div class="compact-row header"><span>웨이브</span><span>원본 HP</span><span>변경 HP</span><span>증가량</span></div>${waveRows}`;
+      $('[data-role="stageEnhanceTable"]', root).innerHTML = `<h4>알파 개체 전환 대상</h4><p class="record-model-note">구성 1 · 기준 구성의 현재 몬스터 체력을 원본으로 유지하고, 선택 단계의 지정 개체를 스테이지 구성 페이지와 동일한 α 개체 체력으로 교체합니다. DATAFIELD 파티 행동과 원본 DPS는 변경하지 않습니다.</p><div class="stage-enhance-target-list">${targetRows}</div><h4>웨이브별 총 HP</h4><div class="compact-row header"><span>웨이브</span><span>원본 HP</span><span>변경 HP</span><span>증가량</span></div>${waveRows}`;
       renderLegendItems($('[data-role="stageEnhanceLegend"]', root), [{label:'기준 구성 HP',color:'#283441'},{label:`강화 [${level}] 적용 HP`,color:'#d7553e'}]);
       renderStageEnhanceChart($('[data-role="stageEnhanceChart"]', root), info);
-      $('[data-role="stageEnhanceImpact"]', root).textContent = `강화 [${level}]은 지정된 ${info.targets.length}마리의 현재 체력을 각각 50% 증가시켜 스테이지 총 HP를 ${num0(info.baseHp)}에서 ${num0(info.totalHp)}로 높입니다. 파티 DPS는 ${num(party.dps)}로 유지되며 예상 클리어 시간은 약 ${num(extra)}초 증가합니다.`;
+      $('[data-role="stageEnhanceImpact"]', root).textContent = `강화 [${level}]은 지정된 ${info.targets.length}마리의 현재 체력을 스테이지 구성 페이지의 α 개체 체력으로 교체해 스테이지 총 HP를 ${num0(info.baseHp)}에서 ${num0(info.totalHp)}로 높입니다. 파티 DPS는 ${num(party.dps)}로 유지되며 예상 클리어 시간은 약 ${num(extra)}초 증가합니다.`;
     });
   }
 
@@ -1626,12 +1626,12 @@
   }
 
   function highHpCapTargets(threshold, enhancement, hpMult) {
-    const enhanced = new Set((enhancement?.targets || []).map(row => row.monster.uid));
+    const enhancedHpByUid = new Map((enhancement?.targets || []).map(row => [row.monster.uid, row.afterHp]));
     const rows = [];
     stage.waves.forEach(wave => wave.phases.forEach(phase => phase.monsters.forEach(monster => {
-      if (monster.hp < threshold) return;
-      const enhanceMult = enhanced.has(monster.uid) ? 1.5 : 1;
-      rows.push({ wave:wave.wave, phase:phase.order, monster, baseHp:monster.hp, hp:monster.hp * enhanceMult * hpMult });
+      const appliedHp = (enhancedHpByUid.get(monster.uid) ?? monster.hp) * hpMult;
+      if (appliedHp < threshold) return;
+      rows.push({ wave:wave.wave, phase:phase.order, monster, baseHp:monster.hp, hp:appliedHp });
     })));
     return rows;
   }
@@ -1721,11 +1721,13 @@
   }
 
   function effectiveStageMonsterRows(enhancement, hpMult = 1) {
-    const enhanced = new Set((enhancement?.targets || []).map(row => row.monster.uid));
-    return stage.waves.flatMap(wave => wave.phases.flatMap(phase => phase.monsters.map(monster => {
-      const enhanceMult = enhanced.has(monster.uid) ? 1.5 : 1;
-      return { wave: wave.wave, phase: phase.order, monster, hp: monster.hp * enhanceMult * hpMult };
-    })));
+    const enhancedHpByUid = new Map((enhancement?.targets || []).map(row => [row.monster.uid, row.afterHp]));
+    return stage.waves.flatMap(wave => wave.phases.flatMap(phase => phase.monsters.map(monster => ({
+      wave: wave.wave,
+      phase: phase.order,
+      monster,
+      hp: (enhancedHpByUid.get(monster.uid) ?? monster.hp) * hpMult
+    }))));
   }
 
   function controlInstantTag(event) {
@@ -2435,7 +2437,7 @@
       statusStage:`부착 지속 ${state.statusStageDurationDisplay}초 · 단계당 피해 -${state.statusStageReductionDisplay}%`,
       battleChill:`냉기 단계 ${state.battleChillStageDisplay} · 부착 쿨타임 ${state.battleChillCooldownDisplay}초`,
       comboChill:`냉기 단계 ${state.comboChillStageDisplay} · 부착 쿨타임 ${state.comboChillCooldownDisplay}초`,
-      stageEnhance:`강화 [${state.stageEnhanceLevelDisplay}] · 대상 몬스터 HP +50%`,
+      stageEnhance:`강화 [${state.stageEnhanceLevelDisplay}] · 대상 몬스터 α 개체 HP 적용`,
       hp:`몬스터 최대 HP +${state.hpDisplay}%`,
       highHpCap:`HP ${num0(state.highHpThresholdDisplay)} 이상 · 0.1초 상한 ${state.highHpCapRateDisplay}%`,
       controlRecovery:`제어 중 초당 최대 HP ${state.controlRecoveryRateDisplay}% 회복`,
@@ -4728,9 +4730,9 @@
     ['statusStageConstraint', 'statusReapplyConstraint', '재적용 대기로 이동한 상태 부착 시각이 상태 단계 누적과 초기화 시점을 바꿉니다.'],
     ['statusReapplyConstraint', 'battleChillConstraint', '재적용 대기로 조정된 행동 시각을 기준으로 배틀 냉기 부착과 동결을 계산합니다.'],
     ['statusReapplyConstraint', 'comboChillConstraint', '재적용 대기로 조정된 행동 시각을 기준으로 연계 냉기 부착과 동결을 계산합니다.'],
-    ['stageEnhanceConstraint', 'highHpCapConstraint', '강화 대상의 증가한 최대 HP가 고체력 기준과 순간 피해 상한량에 반영됩니다.'],
-    ['stageEnhanceConstraint', 'controlRecoveryConstraint', '강화 대상의 증가한 최대 HP가 제어 중 회복량에 반영됩니다.'],
-    ['stageEnhanceConstraint', 'healingShieldRecoveryPreview', '강화 대상의 증가한 최대 HP가 몬스터 회복량에 반영됩니다.'],
+    ['stageEnhanceConstraint', 'highHpCapConstraint', '강화 대상의 α 개체 최대 HP가 고체력 기준과 순간 피해 상한량에 반영됩니다.'],
+    ['stageEnhanceConstraint', 'controlRecoveryConstraint', '강화 대상의 α 개체 최대 HP가 제어 중 회복량에 반영됩니다.'],
+    ['stageEnhanceConstraint', 'healingShieldRecoveryPreview', '강화 대상의 α 개체 최대 HP가 몬스터 회복량에 반영됩니다.'],
     ['highHpCapConstraint', 'controlRecoveryConstraint', '순간 피해 상한 적용 후의 피해량을 기준으로 제어 중 회복 결과를 계산합니다.'],
     ['healingShieldRecoveryPreview', 'decayConstraint', '치유 자원 감소가 메인 오퍼레이터의 회복 발생 횟수와 직접 연결됩니다.'],
     ['healingShieldRecoveryPreview', 'mainOperatorLockConstraint', '전환이 제한된 메인 오퍼레이터의 회복·보호막 수급이 몬스터 회복 조건과 연결됩니다.'],

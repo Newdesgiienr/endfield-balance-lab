@@ -23,38 +23,15 @@
   const GRID_ROWS = 12;
   const METERS_PER_CELL = 2;
   const PLACEMENT_STORAGE_KEY = 'endfieldEnemyPlacementsV5UploadedCompositions';
-  const HP_BUFF_STORAGE_KEY = 'endfieldMonsterHpBuffPercentV1';
-
-  function normalizeHpBuffPercent(value) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return 0;
-    return Math.min(1000, Math.max(0, Math.round(numeric * 10) / 10));
-  }
-
-  function loadHpBuffPercent() {
-    try {
-      return normalizeHpBuffPercent(localStorage.getItem(HP_BUFF_STORAGE_KEY) ?? 0);
-    } catch (error) {
-      return 0;
-    }
-  }
-
-  let hpBuffPercent = loadHpBuffPercent();
-
-  function saveHpBuffPercent() {
-    try {
-      localStorage.setItem(HP_BUFF_STORAGE_KEY, String(hpBuffPercent));
-    } catch (error) {
-      console.warn('몬스터 HP 증가율을 저장하지 못했습니다.');
-    }
-  }
+  const FIXED_MONSTER_HP_INCREASE_PERCENT = 30;
+  const hpBuffPercent = FIXED_MONSTER_HP_INCREASE_PERCENT;
 
   function roundHp(value) {
     return Math.round((Number(value) || 0) * 10) / 10;
   }
 
   function hpMultiplier() {
-    return 1 + hpBuffPercent / 100;
+    return 1 + FIXED_MONSTER_HP_INCREASE_PERCENT / 100;
   }
 
   function monsterHp(monsterOrKey) {
@@ -898,12 +875,21 @@
   function compositionTotals(compositionId) {
     return compositionPlacements(compositionId).reduce((totals, placement) => {
       const monster = MONSTERS[placement.monsterKey];
+      if (!monster) return totals;
       totals.count += 1;
       totals.hp += monsterHp(monster);
       totals.atk += monster.atk;
       totals.stagger += monster.stagger;
       return totals;
     }, { count: 0, hp: 0, atk: 0, stagger: 0 });
+  }
+
+  function renderCompositionTabSummaries() {
+    [1, 2, 3].forEach(compositionId => {
+      const target = document.querySelector(`[data-composition-total="${compositionId}"]`);
+      if (!target) return;
+      target.textContent = fmt(Math.round(compositionTotals(compositionId).hp));
+    });
   }
 
   function currentWaveKeys() {
@@ -1729,20 +1715,9 @@
     $$('tr[data-monster]', body).forEach(row => row.addEventListener('click', () => openMonster(row.dataset.monster)));
   }
 
-  function syncHpBuffControl({ rewriteInput = true } = {}) {
-    const input = $('#monster-hp-buff-input');
-    const multiplier = $('#monster-hp-buff-multiplier');
-    if (input && rewriteInput && document.activeElement !== input) input.value = String(hpBuffPercent);
-    if (multiplier) {
-      const multiplierValue = Number.isInteger(hpBuffPercent)
-        ? hpMultiplier().toFixed(2)
-        : hpMultiplier().toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
-      multiplier.textContent = `기본 HP × ${multiplierValue}`;
-    }
-  }
 
   function renderEnemyWorkspace() {
-    syncHpBuffControl();
+    renderCompositionTabSummaries();
     renderWaveTabs();
     renderMonsterPalette();
     renderBattleGrid();
@@ -2110,22 +2085,6 @@
     renderMonsterTable();
   }));
 
-  const hpBuffInput = $('#monster-hp-buff-input');
-  hpBuffInput?.addEventListener('input', event => {
-    const raw = event.target.value;
-    if (raw === '' || !Number.isFinite(Number(raw))) return;
-    hpBuffPercent = normalizeHpBuffPercent(raw);
-    saveHpBuffPercent();
-    syncHpBuffControl({ rewriteInput: false });
-    renderEnemyWorkspace();
-  });
-  hpBuffInput?.addEventListener('change', event => {
-    hpBuffPercent = normalizeHpBuffPercent(event.target.value);
-    event.target.value = String(hpBuffPercent);
-    saveHpBuffPercent();
-    syncHpBuffControl({ rewriteInput: false });
-    renderEnemyWorkspace();
-  });
 
   $('#range-toggle-btn')?.addEventListener('click', () => {
     showAllRanges = !showAllRanges;

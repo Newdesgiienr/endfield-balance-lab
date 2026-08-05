@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="editor-v12.css?v=107"/>
   <link rel="stylesheet" href="integration.css?v=109"/>
   <link rel="stylesheet" href="editor-v13.css?v=113"/>
+  <link rel="stylesheet" href="editor-v14.css?v=115"/>
   <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body class="dungeon-monster-page">
@@ -130,14 +131,6 @@
         <div class="workspace-kicker">DUNGEON ENEMY EDITOR</div>
         <div class="enemy-title-row">
           <h1>스테이지 내 적 배치</h1>
-          <label class="hp-buff-control" for="monster-hp-buff-input">
-            <span class="hp-buff-label">몬스터 HP 증가</span>
-            <span class="hp-buff-input-shell">
-              <input id="monster-hp-buff-input" type="number" min="0" max="1000" step="0.1" inputmode="decimal" value="0" aria-label="몬스터 HP 증가율">
-              <b>%</b>
-            </span>
-            <small id="monster-hp-buff-multiplier">기본 HP × 1.00</small>
-          </label>
         </div>
         <p>왼쪽 몬스터 데이터베이스에서 아이콘을 끌어 오른쪽 정사각형 격자에 배치합니다. 구성과 웨이브별 배치 내용은 서로 독립적으로 저장됩니다.</p>
       </div>
@@ -166,9 +159,9 @@
         <div class="placement-setup placement-setup-v7 placement-setup-v8">
           <section class="composition-strip" aria-label="몬스터 구성 선택 영역">
             <div class="composition-tabs composition-bookmarks" id="composition-tabs" role="tablist" aria-label="몬스터 구성 선택">
-              <button class="composition-tab active" data-composition="1" role="tab" aria-selected="true"><span>구성 1</span><small>빈 구성</small></button>
-              <button class="composition-tab" data-composition="2" role="tab" aria-selected="false"><span>구성 2</span><small>빈 구성</small></button>
-              <button class="composition-tab" data-composition="3" role="tab" aria-selected="false"><span>구성 3</span><small>빈 구성</small></button>
+              <button class="composition-tab active" data-composition="1" role="tab" aria-selected="true"><span class="composition-tab-main"><b>구성 1</b><em>총 체력: <strong data-composition-total="1">0</strong></em></span><small>[기본] 구성</small></button>
+              <button class="composition-tab" data-composition="2" role="tab" aria-selected="false"><span class="composition-tab-main"><b>구성 2</b><em>총 체력: <strong data-composition-total="2">0</strong></em></span><small>[강화 1] 구성</small></button>
+              <button class="composition-tab" data-composition="3" role="tab" aria-selected="false"><span class="composition-tab-main"><b>구성 3</b><em>총 체력: <strong data-composition-total="3">0</strong></em></span><small>[강화 2] 구성</small></button>
             </div>
           </section>
           <section class="wave-overview-strip wave-overview-strip-compact" aria-label="웨이브 선택 및 요약">
@@ -264,6 +257,6 @@
 <script src="enemy-data.js?v=113"></script>
 <script src="monster-export-assets.js?v=107"></script>
 <script src="script.js?v=107"></script>
-<script src="dashboard.js?v=113"></script>
+<script src="dashboard.js?v=115"></script>
 </body>
 </html>
