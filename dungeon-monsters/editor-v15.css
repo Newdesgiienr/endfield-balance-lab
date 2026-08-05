@@ -1,4 +1,4 @@
-/* V116: 구성 탭 내부를 웨이브 요약 카드형 정보 배치로 정돈한다.
+/* V117: 구성 탭의 정보 배치는 유지하면서 작은 화면에서도 읽기 쉽도록 글자만 확대한다.
    탭 자체의 높이, 패딩, 폭과 외곽선은 기존 규칙을 그대로 사용한다. */
 
 .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main{
@@ -28,7 +28,7 @@
   display:block;
   margin:0 0 5px!important;
   color:#6d7884;
-  font-size:10px;
+  font-size:13px;
   font-weight:900;
   line-height:1;
   letter-spacing:-.02em;
@@ -38,7 +38,7 @@
   display:block;
   margin:0;
   color:inherit;
-  font-size:17px;
+  font-size:21px;
   font-weight:950;
   line-height:1;
   letter-spacing:-.035em;
@@ -52,7 +52,7 @@
   overflow:hidden;
   align-self:center;
   color:#65717e;
-  font-size:11px;
+  font-size:13px;
   font-style:normal;
   font-weight:850;
   line-height:1.1;
@@ -61,7 +61,7 @@
 
 .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main > em strong{
   color:#293746;
-  font-size:13px;
+  font-size:16px;
   font-weight:950;
   letter-spacing:-.025em;
 }
@@ -81,7 +81,8 @@
 @media (max-width:760px){
   .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main{gap:14px;}
   .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-copy{min-width:60px;}
-  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-copy > b{font-size:16px;}
-  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main > em{font-size:10px;}
-  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main > em strong{font-size:12px;}
+  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-copy > small{font-size:12px;}
+  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-copy > b{font-size:19px;}
+  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main > em{font-size:12px;}
+  .placement-setup-v8 .composition-bookmarks .composition-tab .composition-tab-main > em strong{font-size:15px;}
 }
