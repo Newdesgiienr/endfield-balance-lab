@@ -23,6 +23,8 @@
   const GRID_ROWS = 12;
   const METERS_PER_CELL = 2;
   const PLACEMENT_STORAGE_KEY = 'endfieldEnemyPlacementsV5UploadedCompositions';
+  const PLACEMENT_SEED_REVISION_KEY = 'endfieldEnemyPlacementsSeedRevision';
+  const PLACEMENT_SEED_REVISION = 'compositions-1-2-3-grid-only-v123';
   const FIXED_MONSTER_HP_INCREASE_PERCENT = 30;
   const hpBuffPercent = FIXED_MONSTER_HP_INCREASE_PERCENT;
 
@@ -261,9 +263,9 @@
       {
         "uid": "composition-1-wave-1-1-ee3ab2ed-9c0f-4641-bdce-444c3e4fc741",
         "monsterKey": "ram",
-        "slotType": "cell",
-        "x": 4,
-        "y": 2,
+        "slotType": "intersection",
+        "x": 5,
+        "y": 3,
         "spawnOrder": 1
       },
       {
@@ -271,15 +273,15 @@
         "monsterKey": "ram",
         "slotType": "intersection",
         "x": 6,
-        "y": 1,
+        "y": 2,
         "spawnOrder": 1
       },
       {
         "uid": "composition-1-wave-1-3-505d9ac9-f875-4b9d-89ff-8f94e4736f0a",
         "monsterKey": "ram",
-        "slotType": "cell",
+        "slotType": "intersection",
         "x": 7,
-        "y": 2,
+        "y": 3,
         "spawnOrder": 1
       },
       {
@@ -321,14 +323,14 @@
         "monsterKey": "mudflow",
         "slotType": "intersection",
         "x": 6,
-        "y": 5,
+        "y": 6,
         "spawnOrder": 1
       },
       {
         "uid": "composition-1-wave-2-2-37051fc4-6cd3-48fb-a70f-6efbaac7f4c6",
         "monsterKey": "mudflow",
         "slotType": "intersection",
-        "x": 4,
+        "x": 5,
         "y": 8,
         "spawnOrder": 1
       },
@@ -336,7 +338,7 @@
         "uid": "composition-1-wave-2-3-9055d776-fa82-4bbb-a61d-5c85852e464a",
         "monsterKey": "mudflow",
         "slotType": "intersection",
-        "x": 8,
+        "x": 7,
         "y": 8,
         "spawnOrder": 1
       },
@@ -439,9 +441,9 @@
       {
         "uid": "composition-2-wave-1-1-ee3ab2ed-9c0f-4641-bdce-444c3e4fc741",
         "monsterKey": "ram",
-        "slotType": "cell",
-        "x": 4,
-        "y": 2,
+        "slotType": "intersection",
+        "x": 5,
+        "y": 3,
         "spawnOrder": 1
       },
       {
@@ -449,15 +451,15 @@
         "monsterKey": "ram",
         "slotType": "intersection",
         "x": 6,
-        "y": 1,
+        "y": 2,
         "spawnOrder": 1
       },
       {
         "uid": "composition-2-wave-1-3-505d9ac9-f875-4b9d-89ff-8f94e4736f0a",
         "monsterKey": "ram",
-        "slotType": "cell",
+        "slotType": "intersection",
         "x": 7,
-        "y": 2,
+        "y": 3,
         "spawnOrder": 1
       },
       {
@@ -499,14 +501,14 @@
         "monsterKey": "mudflow",
         "slotType": "intersection",
         "x": 6,
-        "y": 5,
+        "y": 6,
         "spawnOrder": 1
       },
       {
         "uid": "composition-2-wave-2-2-37051fc4-6cd3-48fb-a70f-6efbaac7f4c6",
         "monsterKey": "mudflow",
         "slotType": "intersection",
-        "x": 4,
+        "x": 5,
         "y": 8,
         "spawnOrder": 1
       },
@@ -514,7 +516,7 @@
         "uid": "composition-2-wave-2-3-9055d776-fa82-4bbb-a61d-5c85852e464a",
         "monsterKey": "mudflow",
         "slotType": "intersection",
-        "x": 8,
+        "x": 7,
         "y": 8,
         "spawnOrder": 1
       },
@@ -617,9 +619,9 @@
       {
         "uid": "composition-3-wave-1-1-ee3ab2ed-9c0f-4641-bdce-444c3e4fc741",
         "monsterKey": "ram",
-        "slotType": "cell",
-        "x": 4,
-        "y": 2,
+        "slotType": "intersection",
+        "x": 5,
+        "y": 3,
         "spawnOrder": 1
       },
       {
@@ -627,15 +629,15 @@
         "monsterKey": "ram",
         "slotType": "intersection",
         "x": 6,
-        "y": 1,
+        "y": 2,
         "spawnOrder": 1
       },
       {
         "uid": "composition-3-wave-1-3-505d9ac9-f875-4b9d-89ff-8f94e4736f0a",
         "monsterKey": "ram",
-        "slotType": "cell",
+        "slotType": "intersection",
         "x": 7,
-        "y": 2,
+        "y": 3,
         "spawnOrder": 1
       },
       {
@@ -677,14 +679,14 @@
         "monsterKey": "mudflow",
         "slotType": "intersection",
         "x": 6,
-        "y": 5,
+        "y": 6,
         "spawnOrder": 1
       },
       {
         "uid": "composition-3-wave-2-2-37051fc4-6cd3-48fb-a70f-6efbaac7f4c6",
         "monsterKey": "mudflow",
         "slotType": "intersection",
-        "x": 4,
+        "x": 5,
         "y": 8,
         "spawnOrder": 1
       },
@@ -692,7 +694,7 @@
         "uid": "composition-3-wave-2-3-9055d776-fa82-4bbb-a61d-5c85852e464a",
         "monsterKey": "mudflow",
         "slotType": "intersection",
-        "x": 8,
+        "x": 7,
         "y": 8,
         "spawnOrder": 1
       },
@@ -833,7 +835,20 @@
 
   function loadPlacementState() {
     try {
-      return sanitizePlacementState(JSON.parse(localStorage.getItem(PLACEMENT_STORAGE_KEY) || 'null'));
+      const loaded = sanitizePlacementState(JSON.parse(localStorage.getItem(PLACEMENT_STORAGE_KEY) || 'null'));
+      const appliedRevision = localStorage.getItem(PLACEMENT_SEED_REVISION_KEY);
+
+      // V123: 첨부 JSON에서 구성 1~3의 몬스터 격자 배치만 한 번 적용한다.
+      // HP, HP 증가율, 사거리, 몬스터 원본 데이터와 다른 화면 설정은 변경하지 않는다.
+      if (appliedRevision !== PLACEMENT_SEED_REVISION) {
+        Object.keys(DEFAULT_PLACEMENTS).forEach(compositionId => {
+          loaded[compositionId] = clone(DEFAULT_PLACEMENTS[compositionId]);
+        });
+        localStorage.setItem(PLACEMENT_STORAGE_KEY, JSON.stringify(loaded));
+        localStorage.setItem(PLACEMENT_SEED_REVISION_KEY, PLACEMENT_SEED_REVISION);
+      }
+
+      return loaded;
     } catch (error) {
       console.warn('몬스터 배치 저장 데이터를 불러오지 못했습니다.', error);
       return clone(DEFAULT_PLACEMENTS);
