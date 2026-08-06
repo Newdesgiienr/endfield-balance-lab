@@ -12,3 +12,4 @@ ENDFIELD BALANCE LAB · GitHub Pages 배포 점검
 - HTML 내부 로컬 파일 참조 검사 완료
 
 GitHub 업로드 시 이 폴더 안의 파일과 폴더 전체를 저장소 최상단에 올리세요.
+redeploy 2026-08-06
