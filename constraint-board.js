@@ -676,9 +676,15 @@
       return true;
     }
     const selectedSet = new Set(markerIds);
-    const overlap = state.groups.find((group) => (group.markerIds || []).some((id) => selectedSet.has(id)));
+    const overlap = state.groups.find((group) => {
+      const sharesMarker = (group.markerIds || []).some((id) => selectedSet.has(id));
+      if (!sharesMarker) return false;
+      // 일반 묶음끼리는 같은 제약을 공유할 수 있습니다.
+      // 문지기 묶음은 점수 선택 규칙에 관여하므로 기존처럼 중복을 막습니다.
+      return type === 'gatekeeper' || group.type === 'gatekeeper';
+    });
     if (overlap) {
-      showToast('이미 다른 묶음에 포함된 제약이 있습니다. 기존 묶음을 해제한 뒤 다시 묶어주세요.');
+      showToast('문지기 묶음에 포함된 제약은 다른 묶음과 중복할 수 없습니다.');
       return false;
     }
     state.groups.push({
