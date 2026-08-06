@@ -23,6 +23,7 @@
   const tray = document.getElementById('marker-tray');
   const placementList = document.getElementById('placement-marker-list');
   const placementDrawer = document.getElementById('placement-drawer');
+  const selectionResetButton = document.getElementById('reset-selection-button');
   const placementDrawerButton = document.getElementById('open-placement-modal');
   const placementDrawerHandle = document.getElementById('placement-drag-handle');
   const trayViewToggle = document.getElementById('toggle-tray-view');
@@ -832,6 +833,20 @@
       scoreSelectionTotal.setAttribute('aria-label', selected.length ? `선택한 제약 ${selected.length}개, 총 ${total}점` : '선택한 제약 없음, 총 0점');
     }
   }
+
+  function resetConstraintSelections() {
+    const selectedIds = new Set([...selectedMarkerIds, ...scoreSelectedMarkerIds]);
+    cancelPendingScoreSelection();
+    selectedMarkerIds.clear();
+    scoreSelectedMarkerIds.clear();
+    updateSelectionUi();
+    updateScoreSelectionUi();
+    showToast(selectedIds.size
+      ? `${selectedIds.size}개 제약 선택을 모두 해제했습니다.`
+      : '선택된 제약이 없습니다.');
+  }
+
+  selectionResetButton?.addEventListener('click', resetConstraintSelections);
 
   function playScoreSelectionEffect(id) {
     const element = document.querySelector(`.board-marker[data-marker-id="${CSS.escape(String(id))}"]`);
