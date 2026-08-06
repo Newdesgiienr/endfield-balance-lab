@@ -2070,6 +2070,32 @@
     return true;
   }
 
+  const comboEnabledControlIds = [
+    'comboStatEnabled',
+    'comboNormalEnabled',
+    'comboSkillOtherEnabled',
+    'comboComboSpeedEnabled',
+    'comboUltRepeatEnabled',
+    'comboStatusWindowEnabled',
+    'comboStatusStageEnabled',
+    'comboStatusReapplyEnabled',
+    'comboBattleChillEnabled',
+    'comboComboChillEnabled',
+    'comboStageEnhanceEnabled',
+    'comboHighHpCapEnabled',
+    'comboControlRecoveryEnabled',
+    'comboHpEnabled',
+    'comboTimeEnabled'
+  ];
+
+  function resetComboSelections() {
+    comboEnabledControlIds.forEach(id => {
+      const control = $(`#${id}`);
+      if (control) control.checked = false;
+    });
+    updateComboConstraint();
+  }
+
   function bindComboControls() {
     const simpleChecks = ['comboStatEnabled', 'comboNormalEnabled', 'comboUltRepeatEnabled', 'comboStatusWindowEnabled', 'comboStatusStageEnabled', 'comboStatusReapplyEnabled', 'comboBattleChillEnabled', 'comboComboChillEnabled', 'comboStageEnhanceEnabled', 'comboHighHpCapEnabled', 'comboControlRecoveryEnabled', 'comboHpEnabled', 'comboTimeEnabled'];
     simpleChecks.forEach(id => $(`#${id}`).addEventListener('change', updateComboConstraint));
@@ -2161,8 +2187,7 @@
     });
     $('#comboReset').addEventListener('click', event => {
       event.preventDefault();
-      ['comboStatEnabled','comboNormalEnabled','comboSkillOtherEnabled','comboComboSpeedEnabled','comboUltRepeatEnabled','comboStatusWindowEnabled','comboStatusStageEnabled','comboStatusReapplyEnabled','comboBattleChillEnabled','comboComboChillEnabled','comboStageEnhanceEnabled','comboHighHpCapEnabled','comboControlRecoveryEnabled','comboHpEnabled','comboTimeEnabled'].forEach(id => $(`#${id}`).checked = false);
-      updateComboConstraint();
+      resetComboSelections();
     });
   }
 
@@ -2736,7 +2761,13 @@
     const launcher = $('#comboQuickLauncher');
     const closeButton = $('#comboQuickClose');
     const handle = $('#comboQuickDragHandle');
+    const selectionResetButton = $('#comboQuickSelectionReset');
     if (!drawer || !launcher || !closeButton || !handle) return;
+
+    selectionResetButton?.addEventListener('click', event => {
+      event.preventDefault();
+      resetComboSelections();
+    });
 
     const positionKey = 'endfield-combo-quick-drawer-position-v2';
     const mapping = [

@@ -659,7 +659,7 @@ body.combo-quick-dragging{cursor:grabbing;user-select:none;-webkit-user-select:n
 .combo-quick-heading-copy{min-width:0;flex:1 1 auto}
 .combo-quick-header small{display:block;color:#e45d44;font-size:11px;font-weight:950;letter-spacing:.12em}
 .combo-quick-title-row{display:flex;align-items:center;gap:10px;min-width:0}
-.combo-quick-title-row h2{min-width:0;margin:4px 0 0;color:#25323e;font-size:23px}
+.combo-quick-title-row h2{min-width:0;flex:1 1 auto;margin:4px 0 0;color:#25323e;font-size:23px}
 .combo-quick-header p{margin:7px 0 0;color:#6e7b86;font-size:13px;line-height:1.55}
 .combo-quick-close{flex:none;border:0;background:transparent;color:#687682;font-size:29px;line-height:1;cursor:pointer}
 .combo-quick-drag-handle{
@@ -677,6 +677,15 @@ body.combo-quick-dragging{cursor:grabbing;user-select:none;-webkit-user-select:n
   radial-gradient(circle at 16px 4px,currentColor 0 1.6px,transparent 1.8px);
   background-repeat:no-repeat;
 }
+.combo-quick-selection-reset{
+  flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+  min-width:86px;height:30px;padding:0 13px;border:1px solid #e85a43;border-radius:10px;
+  background:#ef5a43;color:#fff;box-shadow:0 4px 10px rgba(224,84,61,.2);
+  font-size:12px;font-weight:900;line-height:1;white-space:nowrap;cursor:pointer;
+}
+.combo-quick-selection-reset:hover{border-color:#d94b35;background:#df4f38}
+.combo-quick-selection-reset:active{transform:translateY(1px)}
+.combo-quick-selection-reset:focus-visible{outline:3px solid rgba(239,90,67,.25);outline-offset:2px}
 .combo-quick-body{flex:1;min-height:0;overflow:auto;padding:13px;background:#f5f8fa}
 .combo-quick-control{
   margin-bottom:12px;padding:14px 15px;border:1px solid #d8dfef;border-top:3px solid #6377d0;
@@ -707,6 +716,7 @@ body.combo-quick-dragging{cursor:grabbing;user-select:none;-webkit-user-select:n
   .combo-quick-launcher{width:38px;height:72px}
   .combo-quick-drawer{top:8px;right:8px;bottom:8px;width:calc(100vw - 16px)}
   .combo-quick-title-row{gap:7px}.combo-quick-drag-handle{width:32px;height:29px}
+  .combo-quick-selection-reset{min-width:78px;height:29px;padding:0 10px;font-size:11px}
 }
 
 
