@@ -45,6 +45,7 @@
 
   let state = loadCurrentState();
   let versions = loadVersions();
+  loadLatestVersionIntoCurrentBoard();
   let saveTimer = null;
   let toastTimer = null;
   let interaction = null;
@@ -218,6 +219,52 @@
       return defaults.map(normalizeVersionRecord)
         .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
     }
+  }
+
+  function parseVersionOrder(name) {
+    const match = String(name || '').trim().match(/^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?$/i);
+    if (!match) return null;
+    return [Number(match[1] || 0), Number(match[2] || 0), Number(match[3] || 0)];
+  }
+
+  function compareVersionOrder(a, b) {
+    const aOrder = parseVersionOrder(a?.name);
+    const bOrder = parseVersionOrder(b?.name);
+
+    if (aOrder && bOrder) {
+      for (let index = 0; index < Math.max(aOrder.length, bOrder.length); index += 1) {
+        const difference = (aOrder[index] || 0) - (bOrder[index] || 0);
+        if (difference) return difference;
+      }
+    } else if (aOrder) {
+      return 1;
+    } else if (bOrder) {
+      return -1;
+    }
+
+    const aCreatedAt = Date.parse(a?.createdAt || '') || 0;
+    const bCreatedAt = Date.parse(b?.createdAt || '') || 0;
+    return aCreatedAt - bCreatedAt;
+  }
+
+  function latestSavedVersion() {
+    return versions.reduce((latest, candidate) => {
+      if (!candidate?.snapshot) return latest;
+      if (!latest || compareVersionOrder(candidate, latest) > 0) return candidate;
+      return latest;
+    }, null);
+  }
+
+  function loadLatestVersionIntoCurrentBoard() {
+    const latest = latestSavedVersion();
+    if (!latest) return;
+
+    state = normalizeState(deepClone(latest.snapshot));
+    state.updatedAt = new Date().toISOString();
+
+    try {
+      localStorage.setItem(CURRENT_KEY, JSON.stringify(state));
+    } catch (_) {}
   }
 
   function clamp(value, min, max) {
